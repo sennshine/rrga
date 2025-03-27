@@ -1,0 +1,70 @@
+import requests
+import time
+
+def get_weather(latitude, longitude, location_name, threshold):
+    url = "https://api.open-meteo.com/v1/forecast"
+    params = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current_weather": True,
+        "daily": ["precipitation_sum", "temperature_2m_max", "temperature_2m_min", "precipitation_hours", "windspeed_10m_max"],
+        "timezone": "Asia/Kuching"
+    }
+    
+    response = requests.get(url, params=params)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if "daily" not in data or not data["daily"]:
+            print(f"⚠️ No weather data available for {location_name}.")
+            return
+        
+        weather = data.get("current_weather", {})
+        daily = data.get("daily", {})
+        
+        daily_precipitation = daily.get("precipitation_sum", [0])[0]
+        temperature_max = daily.get("temperature_2m_max", [0])[0]
+        temperature_min = daily.get("temperature_2m_min", [0])[0]
+        rainfall_frequency = daily.get("precipitation_hours", [0])[0]
+        wind_speed = daily.get("windspeed_10m_max", [0])[0]
+        
+        weather_code = weather.get('weathercode', 'N/A')
+        weather_descriptions = {
+            0: "Clear sky", 1: "Mainly clear", 2: "Partly cloudy", 3: "Overcast",
+            45: "Fog", 48: "Depositing rime fog", 51: "Light drizzle", 53: "Moderate drizzle", 55: "Dense drizzle",
+            56: "Light freezing drizzle", 57: "Dense freezing drizzle", 61: "Slight rain", 63: "Moderate rain",
+            65: "Heavy rain", 66: "Light freezing rain", 67: "Heavy freezing rain", 71: "Slight snow fall",
+            73: "Moderate snow fall", 75: "Heavy snow fall", 77: "Snow grains", 80: "Slight rain showers",
+            81: "Moderate rain showers", 82: "Heavy rain showers", 85: "Slight snow showers", 86: "Heavy snow showers",
+            95: "Thunderstorm (slight)", 96: "Thunderstorm with hail", 99: "Heavy thunderstorm/hail"
+        }
+        weather_description = weather_descriptions.get(weather_code, "Unknown weather condition")
+        
+        print(f"Weather in {location_name}:")
+        print(f"Temperature (Max/Min): {temperature_max}°C / {temperature_min}°C")
+        print(f"Wind Speed: {wind_speed} km/h")
+        print(f"Weather Condition: {weather_description}")
+        print(f"Daily Precipitation: {daily_precipitation} mm")
+        print(f"Rainfall Frequency: {rainfall_frequency} hours")
+        
+        if daily_precipitation > threshold:
+            print(f"⚠️ Flood Alert for {location_name}! Precipitation exceeds threshold ({threshold} mm). ⚠️")
+        print("-" * 30)
+    else:
+        print(f"Failed to retrieve weather data for {location_name}. HTTP Status: {response.status_code}")
+        print(f"Response: {response.text}")
+
+# Districts in Sabah and Sarawak with approximate coordinates
+districts = [
+    (5.9804, 116.0735, "Kota Kinabalu, Sabah", 3560),
+    (5.265, 117.881, "Sandakan, Sabah", 3560),
+    (5.827, 118.057, "Tawau, Sabah", 3560),
+    (1.5533, 110.3592, "Kuching, Sarawak", 3085.5),
+    (3.1611, 113.041, "Bintulu, Sarawak", 3085.5),
+    (2.287, 111.831, "Sibu, Sarawak", 3085.5)
+]
+
+# Fetch and display weather data
+for lat, lon, name, threshold in districts:
+    get_weather(lat, lon, name, threshold)
+    time.sleep(1)  # Prevent API rate limit issues

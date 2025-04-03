@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sabah Weather Map with Wind Flow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- Mapbox -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
+
+  <!-- wind-gl -->
+  <script src="https://unpkg.com/wind-gl@0.0.7/dist/wind-gl.js"></script>
+  <script>
+    // Make WindLayer available globally
+    const WindLayer = window['wind-gl'].WindLayer;
+  </script>
+
+  <style>
+    body { margin: 0; padding: 0; }
+    #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+
+    .weather-box {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      font-family: Arial, sans-serif;
+      border-radius: 8px;
+      max-width: 300px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .weather-box h3 {
+      margin: 0 0 10px;
+      font-size: 16px;
+    }
+
+    #weather-data {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #weather-data th, #weather-data td {
+      text-align: left;
+      padding: 4px;
+      border-bottom: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .loading {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 12px;
+      font-family: sans-serif;
+      font-size: 13px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="weather-table" class="weather-box">
+  <h3>Sabah District Weather</h3>
+  <table id="weather-data">
+    <thead>
+      <tr>
+        <th>District</th>
+        <th>Temp (°C)</th>
+        <th>Wind (m/s)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Dynamic rows -->
+    </tbody>
+  </table>
+</div>
+
+<div id="loading" class="loading">Loading wind particles...</div>
+
+<script>
+  mapboxgl.accessToken = 'pk.eyJ1Ijoic29mLWUtYW5uYSIsImEiOiJjbTkwcmU2OXMwYjFvMmtwcTA1cTVuam91In0.6vQJjS11pD9-Xdno_P8hdg';
+
+  const map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    center: [116.0753, 5.9788],
+    zoom: 8
+  });
+
+  const locations = [
+    { name: "Kota Kinabalu", lat: 5.9804, lon: 116.0735 },
+    { name: "Sandakan", lat: 5.8400, lon: 118.1170 },
+    { name: "Tawau", lat: 4.2447, lon: 117.8912 },
+    { name: "Lahad Datu", lat: 5.0201, lon: 118.3280 },
+    { name: "Keningau", lat: 5.3371, lon: 116.1611 },
+    { name: "Beaufort", lat: 5.3472, lon: 115.7441 },
+    { name: "Kudat", lat: 6.8833, lon: 116.8333 },
+    { name: "Ranau", lat: 6.0200, lon: 116.6700 }
+  ];
+
+  async function getWeather(lat, lon) {
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=auto`);
+    const data = await res.json();
+    return {
+      temperature: data.hourly.temperature_2m[0],
+      wind: data.hourly.wind_speed_10m[0],
+      direction: data.hourly.wind_direction_10m[0]
+    };
+  }
+
+  map.on('load', async () => {
+    const tableBody = document.querySelector('#weather-data tbody');
+
+    map.loadImage('https://cdn-icons-png.flaticon.com/512/892/892354.png', (error, image) => {
+      if (error) throw error;
+      if (!map.hasImage('arrow-icon')) {
+        map.addImage('arrow-icon', image, { sdf: true });
+      }
+    });
+
+    for (const loc of locations) {
+      const weather = await getWeather(loc.lat, loc.lon);
+
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${loc.name}</td>
+        <td>${weather.temperature}</td>
+        <td>${weather.wind}</td>
+      `;
+      tableBody.appendChild(row);
+
+      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
+        <strong>${loc.name}</strong><br>
+        🌡️ Temp: ${weather.temperature}°C<br>
+        💨 Wind: ${weather.wind} m/s
+      `);
+
+      new mapboxgl.Marker()
+        .setLngLat([loc.lon, loc.lat])
+        .setPopup(popup)
+        .addTo(map);
+
+      const geojson = {
+        type: 'FeatureCollection',
+        features: [{
+          type: 'Feature',
+          geometry: {
+            type: 'Point',
+            coordinates: [loc.lon, loc.lat]
+          },
+          properties: {
+            direction: weather.direction,
+            speed: weather.wind
+          }
+        }]
+      };
+
+      const sourceId = `${loc.name}-wind`;
+      const layerId = `${loc.name}-wind-layer`;
+
+      map.addSource(sourceId, { type: 'geojson', data: geojson });
+
+      map.addLayer({
+        id: layerId,
+        type: 'symbol',
+        source: sourceId,
+        layout: {
+          'icon-image': 'arrow-icon',
+          'icon-size': 0.05,
+          'icon-rotate': ['get', 'direction'],
+          'icon-allow-overlap': true
+        },
+        paint: {
+          'icon-color': '#007cbf'
+        }
+      });
+    }
+
+    // Embedded sample wind data (very lightweight)
+    const sampleWindData = {
+      "header": {
+        "nx": 10,
+        "ny": 10,
+        "lo1": 114.5,
+        "la1": 7.5,
+        "lo2": 118.5,
+        "la2": 3.5,
+        "dx": 0.5,
+        "dy": 0.5,
+        "refTime": "2025-04-03T00:00Z"
+      },
+      "data": {
+        "u": Array(100).fill(3),
+        "v": Array(100).fill(1.5)
+      }
+    };
+
+    const windLayer = new WindLayer('wind', {
+      mapbox: map,
+      windOptions: {
+        velocityScale: 0.007,
+        paths: 3000,
+        fadeOpacity: 0.9,
+        dropRate: 0.003,
+        speedFactor: 1,
+        colorScale: [
+          "rgb(36,104,180)",
+          "rgb(60,157,194)",
+          "rgb(128,205,193)",
+          "rgb(151,218,168)",
+          "rgb(198,231,181)",
+          "rgb(238,247,217)",
+          "rgb(255,238,159)",
+          "rgb(252,217,125)",
+          "rgb(255,182,100)",
+          "rgb(252,150,75)",
+          "rgb(250,112,52)",
+          "rgb(245,64,32)",
+          "rgb(237,45,28)",
+          "rgb(220,24,32)",
+          "rgb(180,0,35)"
+        ]
+      },
+      windData: sampleWindData
+    });
+
+    map.addLayer(windLayer);
+    document.getElementById("loading").style.display = "none";
+  });
+</script>
+
+</body>
+</html>

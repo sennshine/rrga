@@ -92,18 +92,6 @@
         .mapboxgl-ctrl-attrib-inner {
             display: none;
         }
-        
-        /* Hazardous triangle sign */
-        .hazard-sign {
-        width: 30px;
-        height: 30px;
-        color: red;
-        background-image: url('https://img.icons8.com/ios/452/warning-shield.png'); /* Use the direct image URL */
-        background-size: contain;
-        background-repeat: no-repeat;
-        }
-
-
     </style>
 </head>
 <body>
@@ -237,20 +225,8 @@
 
         function addRoadClosures() {
             roadClosures.forEach(road => {
-                addHazardousSign(road);
                 getRoadClosureGeometry(road.start, road.end, road.name);
             });
-        }
-
-        function addHazardousSign(road) {
-            // Use a hazardous icon for road closures
-            const hazardElement = document.createElement('div');
-            hazardElement.className = 'hazard-sign';
-            
-            const marker = new mapboxgl.Marker(hazardElement)
-                .setLngLat(road.start) // Use start location of the road closure
-                .setPopup(new mapboxgl.Popup().setHTML(`<strong>Blocked Road:</strong> ${road.name}`))
-                .addTo(map);
         }
 
         async function getRoadClosureGeometry(start, end, roadName) {

@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Sabah Weather Map with Wind Flow</title>
+  <title>Sabah Wind Flow Map - AccuWeather Style</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <!-- Mapbox -->
@@ -12,29 +12,30 @@
   <!-- wind-gl -->
   <script src="https://unpkg.com/wind-gl@0.0.7/dist/wind-gl.js"></script>
   <script>
-    // Make WindLayer available globally
     const WindLayer = window['wind-gl'].WindLayer;
   </script>
 
   <style>
-    body { margin: 0; padding: 0; }
+    body { margin: 0; padding: 0; background: #000; }
     #map { position: absolute; top: 0; bottom: 0; width: 100%; }
 
     .weather-box {
       position: absolute;
       top: 10px;
       left: 10px;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(0, 0, 0, 0.85);
       padding: 12px;
       font-family: Arial, sans-serif;
       border-radius: 8px;
       max-width: 300px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.6);
+      color: white;
     }
 
     .weather-box h3 {
       margin: 0 0 10px;
       font-size: 16px;
+      color: #fff;
     }
 
     #weather-data {
@@ -45,8 +46,12 @@
     #weather-data th, #weather-data td {
       text-align: left;
       padding: 4px;
-      border-bottom: 1px solid #ccc;
+      border-bottom: 1px solid #444;
       font-size: 14px;
+    }
+
+    #weather-data th {
+      color: #ccc;
     }
 
     .loading {
@@ -89,9 +94,9 @@
 
   const map = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/satellite-streets-v12',
+    style: 'mapbox://styles/mapbox/dark-v10',
     center: [116.0753, 5.9788],
-    zoom: 8
+    zoom: 6.5
   });
 
   const locations = [
@@ -106,28 +111,28 @@
   ];
 
   async function getWeather(lat, lon) {
-    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m&timezone=auto`);
+    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,wind_speed_10m&timezone=auto`);
     const data = await res.json();
     return {
       temperature: data.hourly.temperature_2m[0],
-      wind: data.hourly.wind_speed_10m[0],
-      direction: data.hourly.wind_direction_10m[0]
+      wind: data.hourly.wind_speed_10m[0]
     };
   }
 
   map.on('load', async () => {
     const tableBody = document.querySelector('#weather-data tbody');
 
-    map.loadImage('https://cdn-icons-png.flaticon.com/512/892/892354.png', (error, image) => {
-      if (error) throw error;
-      if (!map.hasImage('arrow-icon')) {
-        map.addImage('arrow-icon', image, { sdf: true });
+    // Hide built-in POI icons for a cleaner look
+    const layers = map.getStyle().layers;
+    layers.forEach(layer => {
+      if (layer.id.includes('poi') || layer.id.includes('poi-label')) {
+        map.setLayoutProperty(layer.id, 'visibility', 'none');
       }
     });
 
+    // Load weather table
     for (const loc of locations) {
       const weather = await getWeather(loc.lat, loc.lon);
-
       const row = document.createElement('tr');
       row.innerHTML = `
         <td>${loc.name}</td>
@@ -135,100 +140,45 @@
         <td>${weather.wind}</td>
       `;
       tableBody.appendChild(row);
-
-      const popup = new mapboxgl.Popup({ offset: 25 }).setHTML(`
-        <strong>${loc.name}</strong><br>
-        🌡️ Temp: ${weather.temperature}°C<br>
-        💨 Wind: ${weather.wind} m/s
-      `);
-
-      new mapboxgl.Marker()
-        .setLngLat([loc.lon, loc.lat])
-        .setPopup(popup)
-        .addTo(map);
-
-      const geojson = {
-        type: 'FeatureCollection',
-        features: [{
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [loc.lon, loc.lat]
-          },
-          properties: {
-            direction: weather.direction,
-            speed: weather.wind
-          }
-        }]
-      };
-
-      const sourceId = `${loc.name}-wind`;
-      const layerId = `${loc.name}-wind-layer`;
-
-      map.addSource(sourceId, { type: 'geojson', data: geojson });
-
-      map.addLayer({
-        id: layerId,
-        type: 'symbol',
-        source: sourceId,
-        layout: {
-          'icon-image': 'arrow-icon',
-          'icon-size': 0.05,
-          'icon-rotate': ['get', 'direction'],
-          'icon-allow-overlap': true
-        },
-        paint: {
-          'icon-color': '#007cbf'
-        }
-      });
     }
 
-    // Embedded sample wind data (very lightweight)
+    // ✅ Sample wind data — static for visual effect
     const sampleWindData = {
-      "header": {
-        "nx": 10,
-        "ny": 10,
-        "lo1": 114.5,
-        "la1": 7.5,
-        "lo2": 118.5,
-        "la2": 3.5,
-        "dx": 0.5,
-        "dy": 0.5,
-        "refTime": "2025-04-03T00:00Z"
+      header: {
+        nx: 20,
+        ny: 20,
+        lo1: 114.5,
+        la1: 7.5,
+        lo2: 118.5,
+        la2: 3.5,
+        dx: 0.2,
+        dy: 0.2,
+        refTime: "2025-04-03T00:00Z"
       },
-      "data": {
-        "u": Array(100).fill(3),
-        "v": Array(100).fill(1.5)
+      data: {
+        u: Array(400).fill(6),
+        v: Array(400).fill(2.5)
       }
     };
 
     const windLayer = new WindLayer('wind', {
       mapbox: map,
+      windData: sampleWindData,
       windOptions: {
-        velocityScale: 0.007,
-        paths: 3000,
+        velocityScale: 0.03,
+        paths: 8000,
         fadeOpacity: 0.9,
         dropRate: 0.003,
-        speedFactor: 1,
+        speedFactor: 1.5,
         colorScale: [
-          "rgb(36,104,180)",
-          "rgb(60,157,194)",
-          "rgb(128,205,193)",
-          "rgb(151,218,168)",
-          "rgb(198,231,181)",
-          "rgb(238,247,217)",
-          "rgb(255,238,159)",
-          "rgb(252,217,125)",
-          "rgb(255,182,100)",
-          "rgb(252,150,75)",
-          "rgb(250,112,52)",
-          "rgb(245,64,32)",
-          "rgb(237,45,28)",
-          "rgb(220,24,32)",
-          "rgb(180,0,35)"
+          "rgba(160,160,255,0.1)",
+          "rgba(160,160,255,0.3)",
+          "rgba(170,170,255,0.5)",
+          "rgba(200,200,255,0.6)",
+          "rgba(230,230,255,0.8)",
+          "rgba(255,255,255,1.0)"
         ]
-      },
-      windData: sampleWindData
+      }
     });
 
     map.addLayer(windLayer);

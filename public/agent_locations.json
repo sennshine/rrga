@@ -1,0 +1,402 @@
+[
+  {
+    "id": 1,
+    "region": "Beaufort",
+    "coordinates": [
+      115.691715,
+      5.405838
+    ]
+  },
+  {
+    "id": 2,
+    "region": "Beaufort",
+    "coordinates": [
+      115.755591,
+      5.377941
+    ]
+  },
+  {
+    "id": 3,
+    "region": "Beaufort",
+    "coordinates": [
+      115.731044,
+      5.349725
+    ]
+  },
+  {
+    "id": 4,
+    "region": "Beaufort",
+    "coordinates": [
+      115.705641,
+      5.404716
+    ]
+  },
+  {
+    "id": 5,
+    "region": "Beaufort",
+    "coordinates": [
+      115.749276,
+      5.341032
+    ]
+  },
+  {
+    "id": 6,
+    "region": "Beaufort",
+    "coordinates": [
+      115.750148,
+      5.345013
+    ]
+  },
+  {
+    "id": 7,
+    "region": "Beaufort",
+    "coordinates": [
+      115.731236,
+      5.349971
+    ]
+  },
+  {
+    "id": 8,
+    "region": "Beaufort",
+    "coordinates": [
+      115.737117,
+      5.346475
+    ]
+  },
+  {
+    "id": 9,
+    "region": "Beaufort",
+    "coordinates": [
+      115.731186,
+      5.349437
+    ]
+  },
+  {
+    "id": 10,
+    "region": "Beaufort",
+    "coordinates": [
+      115.73004,
+      5.347308
+    ]
+  },
+  {
+    "id": 11,
+    "region": "Beaufort",
+    "coordinates": [
+      115.725858,
+      5.349461
+    ]
+  },
+  {
+    "id": 12,
+    "region": "Beaufort",
+    "coordinates": [
+      115.732221,
+      5.380536
+    ]
+  },
+  {
+    "id": 13,
+    "region": "Beaufort",
+    "coordinates": [
+      115.750052,
+      5.410335
+    ]
+  },
+  {
+    "id": 14,
+    "region": "Beaufort",
+    "coordinates": [
+      115.696727,
+      5.343469
+    ]
+  },
+  {
+    "id": 15,
+    "region": "Beaufort",
+    "coordinates": [
+      115.71504,
+      5.403778
+    ]
+  },
+  {
+    "id": 16,
+    "region": "Beaufort",
+    "coordinates": [
+      115.712655,
+      5.387637
+    ]
+  },
+  {
+    "id": 17,
+    "region": "Beaufort",
+    "coordinates": [
+      115.692195,
+      5.337845
+    ]
+  },
+  {
+    "id": 18,
+    "region": "Keningau",
+    "coordinates": [
+      116.082183,
+      5.432711
+    ]
+  },
+  {
+    "id": 19,
+    "region": "Keningau",
+    "coordinates": [
+      116.226257,
+      5.34801
+    ]
+  },
+  {
+    "id": 20,
+    "region": "Keningau",
+    "coordinates": [
+      116.271124,
+      5.414604
+    ]
+  },
+  {
+    "id": 21,
+    "region": "Keningau",
+    "coordinates": [
+      116.086168,
+      5.426268
+    ]
+  },
+  {
+    "id": 22,
+    "region": "Keningau",
+    "coordinates": [
+      116.236576,
+      5.378391
+    ]
+  },
+  {
+    "id": 23,
+    "region": "Keningau",
+    "coordinates": [
+      116.170968,
+      5.340824
+    ]
+  },
+  {
+    "id": 24,
+    "region": "Keningau",
+    "coordinates": [
+      116.150058,
+      5.365089
+    ]
+  },
+  {
+    "id": 25,
+    "region": "Keningau",
+    "coordinates": [
+      116.221151,
+      5.446664
+    ]
+  },
+  {
+    "id": 26,
+    "region": "Keningau",
+    "coordinates": [
+      116.183846,
+      5.413251
+    ]
+  },
+  {
+    "id": 27,
+    "region": "Keningau",
+    "coordinates": [
+      116.264158,
+      5.463841
+    ]
+  },
+  {
+    "id": 28,
+    "region": "Keningau",
+    "coordinates": [
+      116.15687,
+      5.391714
+    ]
+  },
+  {
+    "id": 29,
+    "region": "Keningau",
+    "coordinates": [
+      116.201672,
+      5.455666
+    ]
+  },
+  {
+    "id": 30,
+    "region": "Keningau",
+    "coordinates": [
+      116.265019,
+      5.455091
+    ]
+  },
+  {
+    "id": 31,
+    "region": "Keningau",
+    "coordinates": [
+      116.085489,
+      5.428022
+    ]
+  },
+  {
+    "id": 32,
+    "region": "Keningau",
+    "coordinates": [
+      116.15216,
+      5.40663
+    ]
+  },
+  {
+    "id": 33,
+    "region": "Keningau",
+    "coordinates": [
+      116.245073,
+      5.390198
+    ]
+  },
+  {
+    "id": 34,
+    "region": "Keningau",
+    "coordinates": [
+      116.259731,
+      5.432886
+    ]
+  },
+  {
+    "id": 35,
+    "region": "Tenom",
+    "coordinates": [
+      115.988816,
+      5.11164
+    ]
+  },
+  {
+    "id": 36,
+    "region": "Tenom",
+    "coordinates": [
+      115.998573,
+      5.124429
+    ]
+  },
+  {
+    "id": 37,
+    "region": "Tenom",
+    "coordinates": [
+      115.954154,
+      5.113495
+    ]
+  },
+  {
+    "id": 38,
+    "region": "Tenom",
+    "coordinates": [
+      115.943331,
+      5.113263
+    ]
+  },
+  {
+    "id": 39,
+    "region": "Tenom",
+    "coordinates": [
+      115.996795,
+      5.129632
+    ]
+  },
+  {
+    "id": 40,
+    "region": "Tenom",
+    "coordinates": [
+      115.956321,
+      5.155797
+    ]
+  },
+  {
+    "id": 41,
+    "region": "Tenom",
+    "coordinates": [
+      115.984274,
+      5.114723
+    ]
+  },
+  {
+    "id": 42,
+    "region": "Tenom",
+    "coordinates": [
+      115.969588,
+      5.10829
+    ]
+  },
+  {
+    "id": 43,
+    "region": "Tenom",
+    "coordinates": [
+      115.984697,
+      5.115196
+    ]
+  },
+  {
+    "id": 44,
+    "region": "Tenom",
+    "coordinates": [
+      115.973732,
+      5.110678
+    ]
+  },
+  {
+    "id": 45,
+    "region": "Tenom",
+    "coordinates": [
+      115.996156,
+      5.125493
+    ]
+  },
+  {
+    "id": 46,
+    "region": "Tenom",
+    "coordinates": [
+      115.956563,
+      5.126151
+    ]
+  },
+  {
+    "id": 47,
+    "region": "Tenom",
+    "coordinates": [
+      115.962733,
+      5.150926
+    ]
+  },
+  {
+    "id": 48,
+    "region": "Tenom",
+    "coordinates": [
+      115.957836,
+      5.153901
+    ]
+  },
+  {
+    "id": 49,
+    "region": "Tenom",
+    "coordinates": [
+      115.961457,
+      5.151785
+    ]
+  },
+  {
+    "id": 50,
+    "region": "Tenom",
+    "coordinates": [
+      115.985519,
+      5.117557
+    ]
+  }
+]

@@ -1,382 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mapbox Navigation with Evacuation Points & Road Closures</title>
-    
-    <!-- Mapbox SDK -->
-    <script src='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'></script>
-    <link href='https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css' rel='stylesheet' />
-    
-    <!-- Mapbox Directions API -->
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
-    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css" type="text/css">
-    
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        #map {
-            width: 100%;
-            height: 80vh;
-        }
-        #controls {
-            width: 100%;
-            padding: 15px;
-            background: #f8f9fa;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        button {
-            padding: 12px;
-            font-size: 18px;
-            cursor: pointer;
-            width: 90%;
-            max-width: 300px;
-            margin-top: 10px;
-            border: none;
-            background: #007bff;
-            color: white;
-            border-radius: 5px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        
-        /* Custom Alert Modal Styles */
-        .modal {
-            display: none; /* Hidden by default */
-            position: fixed; /* Stay in place */
-            z-index: 10; /* Sit on top */
-            left: 0;
-            top: 0;
-            width: 100%; /* Full width */
-            height: 100%; /* Full height */
-            background-color: rgba(0, 0, 0, 0.5); /* Black background with opacity */
-            overflow: auto; /* Enable scroll if needed */
-            padding-top: 100px;
-        }
-        .modal-content {
-            background-color: #fff;
-            margin: 5% auto;
-            padding: 20px;
-            border-radius: 10px;
-            width: 80%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .close {
-            color: #aaa;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 20px;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Uninformed Agents Simulation</title>
 
-        /* Hide Mapbox attribution */
-        .mapboxgl-ctrl-attrib-inner {
-            display: none;
-        }
-    </style>
+  <!-- Mapbox SDK -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+
+  <!-- Mapbox Directions -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
+  <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css"/>
+
+  <!-- Global evacuation & road closures -->
+  <script>
+    window.evacuationSites = [
+      { name: "Dewan Selagon", area: "Beaufort", coordinates: [115.739, 5.398] },
+      { name: "Dewan PSP Dun Banir", area: "Beaufort", coordinates: [115.733, 5.354] },
+      { name: "Dewan Masyarakat Keningau", area: "Keningau", coordinates: [116.161, 5.345] },
+      { name: "Dewan Serbaguna Pekan", area: "Keningau", coordinates: [116.156, 5.337] },
+      { name: "Datuk Seri Panglima Antanom Hall", area: "Tenom", coordinates: [115.944, 5.124] },
+      { name: "SK Pekan Tenom", area: "Tenom", coordinates: [115.945, 5.127] }
+    ];
+
+    window.roadClosures = [
+      { name: "Jalan Keningau-Kimanis", start: [116.0696, 5.4596], end: [116.0973, 5.3959] },
+      { name: "Jalan Lumatai", start: [115.7315, 5.3479], end: [115.7311, 5.3479] },
+      { name: "Jalan Pak Musa", start: [115.7464, 5.3444], end: [115.7462, 5.3446] }
+    ];
+  </script>
+
+  <!-- Simulation logic -->
+  <script src="uninformedAgents.js" defer></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      text-align: center;
+      padding: 15px;
+      margin: 0;
+      background-color: #f8f8f8;
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+
+    #sim-controls {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      z-index: 999;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      max-width: 240px;
+      font-size: 14px;
+    }
+
+    #sim-controls button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #startBtn {
+      background-color: #28a745;
+    }
+
+    #stopBtn {
+      background-color: #dc3545;
+    }
+
+    #arrivedCount {
+      font-weight: bold;
+      margin: 0 0 10px 0;
+    }
+
+    #table-wrapper {
+      position: absolute;
+      top: 70px;
+      right: 40px;
+      z-index: 999;
+      max-height: 300px;
+      overflow-y: auto;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 3px rgba(0,0,0,0.2);
+      font-size: 13px;
+    }
+
+    #table-wrapper table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #table-wrapper th,
+    #table-wrapper td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      text-align: center;
+    }
+
+    #table-wrapper thead {
+      background-color: #f0f0f0;
+      position: sticky;
+      top: 0;
+    }
+
+    .mapboxgl-ctrl-attrib {
+      display: none !important;
+    }
+  </style>
 </head>
 <body>
-    <div id="controls">
-        <h2>Navigation with Evacuation Points & Road Closures</h2>
-    </div>
-    
-    <div id="map"></div>
-    
-    <!-- Custom Alert Modal -->
-    <div id="myModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <p id="alertMessage"></p>
-        </div>
-    </div>
+  <h1>Uninformed Agents Simulation</h1>
+  <div id="map"></div>
 
-    <script>
-        mapboxgl.accessToken = 'pk.eyJ1Ijoid3NuYzAiLCJhIjoiY204eDR2eXM1MDBoeDJrb3RxcWcycGh0MSJ9.RrkeTWJCa3lhoQJsTq_EBQ';
-        let origin = [115.542913, 5.298978]; 
-        let destination = null;
-        let routeLine = null;
+  <!-- Bottom-left Controls -->
+  <div id="sim-controls">
+    <button id="startBtn">Start Simulation</button>
+    <button id="stopBtn">Stop Simulation</button>
+    <p id="arrivedCount">Arrived: 0</p>
+  </div>
 
-        // All Evacuation Sites
-        const evacuationSites = [
-            { name: "Dewan Selagon", area: "Beaufort", coordinates: [115.73937904860162, 5.398396950885243] },
-            { name: "Dewan PSP Dun Banir", area: "Beaufort", coordinates: [115.7334127282223, 5.3549036708753235] },
-            { name: "Dewan Bisaya", area: "Beaufort", coordinates: [115.7344215639457, 5.361356878354286] },
-            { name: "Dewan Residensi Prima", area: "Beaufort", coordinates: [115.74818493563325, 5.400393294026437] },
-            { name: "Dewan Kukut", area: "Beaufort", coordinates: [115.69844738740314, 5.386323384060461] },
-            { name: "Pa' Musa Community Hall", area: "Beaufort", coordinates: [115.74714407610811, 5.344622116561316] },
-            { name: "Dewan SMK Beaufort 3", area: "Beaufort", coordinates: [115.73122449596387, 5.338514245107157] },
-            { name: "Membakut Islamic Arts Hall", area: "Membakut", coordinates: [115.80151432641107, 5.476239557782567] },
-            { name: "SMK St. Patrick Membakut", area: "Membakut", coordinates: [115.79418494330773, 5.474439858120865] },
-            { name: "Sekolah Kebangsaan Pekan Membakut", area: "Membakut", coordinates: [115.80024204670788, 5.4739517584774235] },
-            { name: "DEWAN SMK MEMBAKUT", area: "Membakut", coordinates: [115.80292087158212, 5.4758932752860625] },
-            { name: "Masjid Cahaya Iman Membakut", area: "Membakut", coordinates: [115.80205579699727, 5.4756905384269] },
-            { name: "Dewan Masyarakat Keningau", area: "Sook", coordinates: [116.16125256204798, 5.345185647730118] },
-            { name: "Dato Angian Andulag Apin-Apin Hall", area: "Sook", coordinates: [116.2668531160277, 5.466851860631998] },
-            { name: "Dewan Serbaguna Pekan", area: "Sook", coordinates: [116.15667306985348, 5.337862909569804] },
-            { name: "Dewan Koningau", area: "Tenom", coordinates: [116.16029769573093, 5.345036097164509] },
-            { name: "Dewan Arkid", area: "Tenom", coordinates: [116.16046872825626, 5.338115116907178] },
-            { name: "Dewan Serbaguna Kompleks Sukan Tenom", area: "Tenom", coordinates: [115.94030388777145, 5.118389590836571] },
-            { name: "Datuk Seri Panglima Antanom Hall", area: "Tenom", coordinates: [115.94499065651249, 5.1248204892241045] },
-            { name: "Dewan Perjumpaan Saksi Yehwa Tenom", area: "Tenom", coordinates: [115.94432010068758, 5.123711901762699] },
-            { name: "Sri Ontotos Hall", area: "Tenom", coordinates: [115.91934239884245, 4.913805130486194] },
-            { name: "Dewan Datuk OKK Sanggau Jalang", area: "Tenom", coordinates: [115.99871640311154, 5.2431233197290625] },
-            { name: "Sekolah Menengah Saint Anthony Tenom", area: "Tenom", coordinates: [115.9481315742765, 5.130548173640122] },
-            { name: "SM Chung Hwa Tenom", area: "Tenom", coordinates: [115.94665796931984, 5.128264646036473] },
-            { name: "SK Pekan Tenom", area: "Tenom", coordinates: [115.94563063194656, 5.1273169026898495] },
-            { name: "Surau Al Falah", area: "Tenom", coordinates: [115.95205588350234, 5.122043389920686] },
-            { name: "Masjid Al-Rahman", area: "Tenom", coordinates: [115.94538232767745, 5.125681776495361] },
-            { name: "Kompleks Sukan Tenom", area: "Tenom", coordinates: [115.9405000319466, 5.119091832525258] },
-            { name: "Dewan Perniagaan Tionghua", area: "Tenom", coordinates: [115.94500374117237, 5.1230327476119] }
-        ];
+  <!-- Top-right Table -->
+  <div id="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Agent ID</th>
+          <th>District</th>
+          <th>Time Taken(s)</th>
+          <th>Distance(km)</th>
+        </tr>
+      </thead>
+      <tbody id="arrivalTableBody"></tbody>
+    </table>
+  </div>
 
-        const roadClosures = [
-            { name: "Jalan Keningau-Kimanis", start: [116.069627, 5.459655], end: [116.097359, 5.395954] },
-            { name: "Jalan Mesej Kelanyaan", start: [115.95894, 5.154885], end: [115.966342, 5.173261] },
-            { name: "Jalan Pimping", start: [115.781556, 5.48546], end: [115.781662, 5.487937] },
-            { name: "Jalan Lumatai", start: [115.731519, 5.3479], end: [115.731164, 5.347975] },
-            { name: "Jalan Pak Musa", start: [115.746404, 5.344486], end: [115.746243, 5.344694] }
-        ];
+  <script>
+    mapboxgl.accessToken = 'pk.eyJ1Ijoid3NuYzAiLCJhIjoiY204eDR2eXM1MDBoeDJrb3RxcWcycGh0MSJ9.RrkeTWJCa3lhoQJsTq_EBQ';
 
-        const map = new mapboxgl.Map({
-            container: 'map',
-            style: 'mapbox://styles/mapbox/streets-v12',
-            center: origin,
-            zoom: 12,
-            pitch: 45
-        });
+    const origin = [115.542913, 5.298978];
 
-        map.addControl(new mapboxgl.NavigationControl());
+    const map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: origin,
+      zoom: 10,
+      pitch: 45
+    });
 
-        map.on('load', () => {
-            addOriginMarker();
-            addEvacuationSites();
-            addRoadClosures();
+    map.addControl(new mapboxgl.NavigationControl());
 
-            // Add empty route source and layer
-            map.addSource('route', {
-                type: 'geojson',
-                data: {
-                    type: 'Feature',
-                    properties: {},
-                    geometry: {
-                        type: 'LineString',
-                        coordinates: []
-                    }
-                }
+    function addRoadblockMarker(position) {
+      const el = document.createElement('img');
+      el.src = 'roadblock.png';
+      el.alt = 'Roadblock';
+      el.style.width = '25px';
+      el.style.height = '25px';
+
+      new mapboxgl.Marker(el)
+        .setLngLat(position)
+        .setPopup(new mapboxgl.Popup().setText('Road Block'))
+        .addTo(map);
+    }
+
+    function drawBlockedRoad(road) {
+      fetch(`https://api.mapbox.com/directions/v5/mapbox/driving/${road.start[0]},${road.start[1]};${road.end[0]},${road.end[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.routes && data.routes.length > 0) {
+            const coords = data.routes[0].geometry.coordinates;
+            map.addSource(road.name, {
+              type: 'geojson',
+              data: { type: 'Feature', geometry: { type: 'LineString', coordinates: coords } }
             });
 
             map.addLayer({
-                id: 'route',
-                type: 'line',
-                source: 'route',
-                layout: {
-                    'line-join': 'round',
-                    'line-cap': 'round'
-                },
-                paint: {
-                    'line-color': '#ff0000',
-                    'line-width': 5
-                }
+              id: road.name,
+              type: 'line',
+              source: road.name,
+              layout: { 'line-join': 'round', 'line-cap': 'round' },
+              paint: { 'line-color': 'purple', 'line-width': 5 }
             });
+          }
         });
+    }
 
-        function addOriginMarker() {
-            const el = document.createElement('div');
-            el.className = 'marker';
-            
-            new mapboxgl.Marker({ color: '#0000FF' })
-                .setLngLat(origin)
-                .setPopup(new mapboxgl.Popup().setHTML("<strong>Start Location</strong>"))
-                .addTo(map);
+    function isRoadBlockedAt([lon, lat]) {
+      return window.roadClosures.some(road => {
+        const dist = (p1, p2) => Math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2);
+        return dist([lon, lat], road.start) < 0.01 || dist([lon, lat], road.end) < 0.01;
+      });
+    }
+
+    map.on('load', () => {
+      window.evacuationSites.forEach(site => {
+        new mapboxgl.Marker({ color: '#00FF00' })
+          .setLngLat(site.coordinates)
+          .setPopup(new mapboxgl.Popup().setHTML(`<strong>${site.name}</strong><br>${site.area}`))
+          .addTo(map);
+      });
+
+      window.roadClosures.forEach(road => {
+        drawBlockedRoad(road);
+        addRoadblockMarker(road.start);
+        addRoadblockMarker(road.end);
+      });
+
+      map.addSource('route', {
+        type: 'geojson',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [] }
         }
+      });
 
-        function addEvacuationSites() {
-            evacuationSites.forEach(site => {
-                const marker = new mapboxgl.Marker({ color: '#00FF00' })
-                    .setLngLat(site.coordinates)
-                    .setPopup(new mapboxgl.Popup().setHTML(`<strong>${site.name}</strong><br>${site.area}`))
-                    .addTo(map);
-
-                marker.getElement().addEventListener('click', () => {
-                    destination = site.coordinates;
-                    getRoute();
-                });
-            });
-        }
-
-        function addRoadClosures() {
-            roadClosures.forEach(road => {
-                getRoadClosureGeometry(road.start, road.end, road.name);
-            });
-        }
-
-        async function getRoadClosureGeometry(start, end, roadName) {
-            // Get directions using Mapbox Directions API
-            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${start[0]},${start[1]};${end[0]},${end[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-            
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.routes && data.routes.length > 0) {
-                const route = data.routes[0];
-                const routePoints = route.geometry.coordinates;
-                
-                // Add source and layer for this road closure
-                map.addSource(roadName, {
-                    type: 'geojson',
-                    data: {
-                        type: 'Feature',
-                        properties: {},
-                        geometry: {
-                            type: 'LineString',
-                            coordinates: routePoints
-                        }
-                    }
-                });
-
-                map.addLayer({
-                    id: roadName,
-                    type: 'line',
-                    source: roadName,
-                    layout: {
-                        'line-join': 'round',
-                        'line-cap': 'round'
-                    },
-                    paint: {
-                        'line-color': 'purple',
-                        'line-width': 5
-                    }
-                });
-            }
-        }
-
-        async function getRoute() {
-            if (!destination) return;
-            
-            // Get directions using Mapbox Directions API
-            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
-            
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.routes && data.routes.length > 0) {
-                const route = data.routes[0];
-                const routePoints = route.geometry.coordinates;
-                
-                // Check for blocked roads along the route
-                const blockedRoad = checkForBlockedRoads(routePoints);
-                
-                if (blockedRoad) {
-                    showCustomAlert("Road to evacuation center is blocked! Please try another evacuation center.");
-                    reroute(routePoints);
-                } else {
-                    displayRoute(routePoints);
-                }
-            }
-        }
-
-        function checkForBlockedRoads(routePoints) {
-            return roadClosures.some(road => {
-                // Compare the coordinates along the route with blocked roads
-                for (let i = 0; i < routePoints.length; i++) {
-                    let [lon, lat] = routePoints[i];
-                    if (isPointOnRoad(lon, lat, road)) {
-                        return true;
-                    }
-                }
-                return false;
-            });
-        }
-
-        function isPointOnRoad(lon, lat, road) {
-            // Use a simple distance formula to check if the point is near the road blockage
-            const roadStart = road.start;
-            const roadEnd = road.end;
-            const distStart = Math.sqrt(Math.pow(roadStart[0] - lon, 2) + Math.pow(roadStart[1] - lat, 2));
-            const distEnd = Math.sqrt(Math.pow(roadEnd[0] - lon, 2) + Math.pow(roadEnd[1] - lat, 2));
-            return distStart < 0.01 || distEnd < 0.01;
-        }
-
-        async function reroute(originalRoutePoints) {
-            // Try to get an alternate route by using a different profile
-            const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${origin[0]},${origin[1]};${destination[0]},${destination[1]}?geometries=geojson&alternatives=true&access_token=${mapboxgl.accessToken}`;
-            
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.routes && data.routes.length > 1) {
-                // Use the alternative route (second one)
-                const newRoute = data.routes[1];
-                displayRoute(newRoute.geometry.coordinates);
-            } else if (data.routes && data.routes.length > 0) {
-                // If no alternatives, use the original route
-                displayRoute(data.routes[0].geometry.coordinates);
-            } else {
-                showCustomAlert("No alternate routes available!");
-            }
-        }
-
-        function displayRoute(routePoints) {
-            // Update the route source data
-            map.getSource('route').setData({
-                type: 'Feature',
-                properties: {},
-                geometry: {
-                    type: 'LineString',
-                    coordinates: routePoints
-                }
-            });
-            
-            // Fit map to show the entire route
-            const bounds = new mapboxgl.LngLatBounds();
-            routePoints.forEach(point => {
-                bounds.extend(point);
-            });
-            
-            map.fitBounds(bounds, {
-                padding: 50
-            });
-        }
-
-        function showCustomAlert(message) {
-            const modal = document.getElementById("myModal");
-            const alertMessage = document.getElementById("alertMessage");
-            alertMessage.innerHTML = message;
-            modal.style.display = "block";
-        }
-
-        // Close the modal when the user clicks the close button
-        const closeBtn = document.getElementsByClassName("close")[0];
-        closeBtn.onclick = function() {
-            document.getElementById("myModal").style.display = "none";
-        }
-
-        // Close the modal if the user clicks anywhere outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById("myModal");
-            if (event.target == modal) {
-                modal.style.display = "none";
-            }
-        }
-    </script>
+      map.addLayer({
+        id: 'route',
+        type: 'line',
+        source: 'route',
+        layout: { 'line-join': 'round', 'line-cap': 'round' },
+        paint: { 'line-color': '#ff0000', 'line-width': 5 }
+      });
+    });
+  </script>
 </body>
 </html>

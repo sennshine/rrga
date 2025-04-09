@@ -64,8 +64,8 @@ class Agent {
         const img = document.createElement('img');
         img.src = isArrived ? ARRIVED_ICON_URL : AGENT_ICON_URL;
         img.alt = isArrived ? "arrived" : "evacuating";
-        img.style.width = '30px';
-        img.style.height = '30px';
+        img.style.width = '20px';
+        img.style.height = '20px';
         img.style.objectFit = 'contain';
         return img;
     }
@@ -74,21 +74,18 @@ class Agent {
         const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${this.position[0]},${this.position[1]};${destination[0]},${destination[1]}?geometries=geojson&alternatives=true&access_token=${mapboxgl.accessToken}`;
         const res = await fetch(url);
         const data = await res.json();
-
+    
         if (data.routes && data.routes.length > 0) {
-            for (let route of data.routes) {
-                const coords = route.geometry.coordinates;
-                if (!checkForBlockedRoads(coords)) {
-                    this.route = coords;
-                    this.routeIndex = 0;
-                    this.destination = destination;
-                    this.triedDestinations.clear();
-                    return true;
-                }
-            }
+            this.route = data.routes[0].geometry.coordinates;
+            this.routeIndex = 0;
+            this.destination = destination;
+            return true;
         }
+    
         return false;
     }
+    
+      
 
     move() {
         if (this.status === "delayed") {
@@ -131,36 +128,42 @@ class Agent {
     async checkAndReroute() {
         if (this.status !== "moving") return;
         if (!this.route || this.routeIndex >= this.route.length) return;
-
-        const point = this.route[this.routeIndex];
-        if (!point || !Array.isArray(point)) return;
-
-        if (!checkForBlockedRoads([point])) return;
-
-        this.triedDestinations.add(JSON.stringify(this.destination));
-        const success = await this.planRoute(this.destination);
-
-        if (!success) {
-            const fallback = evacuationSites.find(site =>
-                !this.triedDestinations.has(JSON.stringify(site.coordinates))
-            );
-
-            if (fallback) {
-                const newSuccess = await this.planRoute(fallback.coordinates);
-                if (newSuccess) {
-                    console.log(`Agent ${this.id} rerouted to ${fallback.name}`);
-                    this.evacuationSiteName = fallback.name;
-                    this.centerName = fallback.area;
-                    this.rerouteCount++;
-                    return;
+    
+        const currentPoint = this.route[this.routeIndex];
+    
+        // Only reroute if the current point is near a roadblock
+        if (checkForBlockedRoads([currentPoint])) {
+            console.log(`Agent ${this.id} encountered a road block.`);
+    
+            this.triedDestinations.add(JSON.stringify(this.destination));
+            const success = await this.planRoute(this.destination);
+    
+            if (!success) {
+                // Try a new site
+                const fallback = evacuationSites.find(site =>
+                    !this.triedDestinations.has(JSON.stringify(site.coordinates))
+                );
+    
+                if (fallback) {
+                    const newSuccess = await this.planRoute(fallback.coordinates);
+                    if (newSuccess) {
+                        console.log(`Agent ${this.id} rerouted to ${fallback.name}`);
+                        this.evacuationSiteName = fallback.name;
+                        this.centerName = fallback.area;
+                        this.rerouteCount++;
+                        return;
+                    }
                 }
+    
+                // Retry later
+                console.warn(`Agent ${this.id} stuck — retrying reroute in 3s...`);
+                setTimeout(() => this.checkAndReroute(), 3000);
+            } else {
+                this.rerouteCount++;
             }
-
-            setTimeout(() => this.checkAndReroute(), 3000);
-        } else {
-            this.rerouteCount++;
         }
     }
+    
 
     visualizeArrival() {
         const newMarker = new mapboxgl.Marker({
@@ -171,11 +174,15 @@ class Agent {
         this.marker.remove();
         this.marker = newMarker;
       
-        // Update Arrived count
-        const countElem = document.getElementById('arrivedCount');
-        if (countElem) {
-          const current = parseInt(countElem.textContent.split(': ')[1]);
-          countElem.textContent = `Arrived: ${current + 1}`;
+        // Update Average Time in UI
+        const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
+        if (arrivedAgents.length > 0) {
+          const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
+          const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
+          const avgElem = document.getElementById('averageTime');
+          if (avgElem) {
+            avgElem.textContent = `Average Time: ${avg}s`;
+          }
         }
       
         // Append to top-right table
@@ -247,8 +254,10 @@ function animateAgents() {
         animationFrameId = requestAnimationFrame(animateAgents);
     } else {
         showMetricsSummary();
+        showSimulationCompleteModal(); // 🎯 Trigger modal
     }
 }
+
 
 function clearAgents() {
     agents.forEach(agent => agent.removeMarker());
@@ -273,6 +282,24 @@ document.getElementById("startBtn").addEventListener("click", () => {
         initAgentSimulation();
     }
 });
+
+function showSimulationCompleteModal() {
+    const modal = document.getElementById("completionModal");
+    modal.style.display = "flex";
+  
+    const closeBtn = document.getElementById("closeModalBtn");
+    closeBtn.onclick = () => {
+      modal.style.display = "none";
+    };
+  
+    // Optional: Close on outside click
+    window.onclick = (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
+    };
+  }
+  
 
 document.getElementById("stopBtn").addEventListener("click", () => {
     simulationRunning = false;

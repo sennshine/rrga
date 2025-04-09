@@ -51,21 +51,27 @@
       border-bottom: 1px solid #ddd;
     }
 
+    html, body {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
     #map {
+      flex-grow: 1;
       width: 100%;
-      height: 100vh;
     }
 
     #sim-controls {
       position: absolute;
-      bottom: 10px;
+      bottom: 30px;
       left: 10px;
       z-index: 999;
-      background: rgba(255, 255, 255, 0.95);
+      background: rgba(255, 255, 255, 0.902);
       padding: 10px;
       border-radius: 8px;
       box-shadow: 0 0 5px rgba(0,0,0,0.2);
-      max-width: 240px;
+      max-width: 200px;
       font-size: 14px;
     }
 
@@ -89,7 +95,7 @@
       background-color: #dc3545;
     }
 
-    #arrivedCount {
+    #averageTime {
       font-weight: bold;
       margin: 0 0 10px 0;
     }
@@ -105,7 +111,7 @@
       padding: 10px;
       border-radius: 8px;
       box-shadow: 0 0 3px rgba(0,0,0,0.2);
-      font-size: 13px;
+      font-size: 12px;
     }
 
     #table-wrapper table {
@@ -139,7 +145,7 @@
   <div id="sim-controls">
     <button id="startBtn">Start Simulation</button>
     <button id="stopBtn">Stop Simulation</button>
-    <p id="arrivedCount">Arrived: 0</p>
+    <p id="averageTime">Average Time: 0.00s</p>
   </div>
 
   <!-- Top-right Table -->
@@ -160,14 +166,14 @@
   <script>
     mapboxgl.accessToken = 'pk.eyJ1Ijoid3NuYzAiLCJhIjoiY204eDR2eXM1MDBoeDJrb3RxcWcycGh0MSJ9.RrkeTWJCa3lhoQJsTq_EBQ';
 
-    const origin = [115.542913, 5.298978];
+    const origin = [116.02027, 5.34439];
 
     const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v12',
       center: origin,
-      zoom: 10,
-      pitch: 45
+      zoom: 9.5,
+      pitch: 0
     });
 
     map.addControl(new mapboxgl.NavigationControl());
@@ -176,8 +182,8 @@
       const el = document.createElement('img');
       el.src = 'roadblock.png';
       el.alt = 'Roadblock';
-      el.style.width = '25px';
-      el.style.height = '25px';
+      el.style.width = '20px';
+      el.style.height = '20px';
 
       new mapboxgl.Marker(el)
         .setLngLat(position)
@@ -245,5 +251,51 @@
       });
     });
   </script>
+  <!-- Simulation Complete Modal -->
+<div id="completionModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <h2>✅ Simulation Complete</h2>
+    <p>All agents have successfully evacuated to safety.</p>
+    <button id="closeModalBtn">Close</button>
+  </div>
+</div>
+
+<style>
+  .modal {
+    position: fixed;
+    z-index: 9999;
+    left: 0;
+    top: 0;
+    width: 80%;
+    height: 80%;
+    background-color: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    max-width: 400px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+
+  #closeModalBtn {
+    margin-top: 20px;
+    padding: 10px 20px; 
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  #closeModalBtn:hover {
+    background-color: #218838;
+  }
+</style>
 </body>
 </html>

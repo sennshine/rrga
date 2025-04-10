@@ -1,6 +1,6 @@
 const AGENT_ICON_URL = 'red-person.png';
 const ARRIVED_ICON_URL = 'green-person.png';
-const AGENT_COUNT = 20;
+
 
 const REGIONS = {
     Beaufort: { name: "Beaufort", bbox: [115.69, 5.33, 115.76, 5.41] },
@@ -71,19 +71,34 @@ class Agent {
     }
 
     async planRoute(destination = this.destination) {
-        const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${this.position[0]},${this.position[1]};${destination[0]},${destination[1]}?geometries=geojson&alternatives=true&access_token=${mapboxgl.accessToken}`;
-        const res = await fetch(url);
-        const data = await res.json();
-    
-        if (data.routes && data.routes.length > 0) {
+        try {
+          const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${this.position[0]},${this.position[1]};${destination[0]},${destination[1]}?geometries=geojson&alternatives=true&access_token=${mapboxgl.accessToken}`;
+          console.log(`🔍 Agent ${this.id} requesting route:\n${url}`);
+      
+          const res = await fetch(url);
+      
+          if (!res.ok) {
+            const errorText = await res.text();
+            console.error(`❌ Agent ${this.id} fetch failed: ${res.status} - ${errorText}`);
+            return false;
+          }
+      
+          const data = await res.json();
+      
+          if (data.routes && data.routes.length > 0) {
             this.route = data.routes[0].geometry.coordinates;
             this.routeIndex = 0;
             this.destination = destination;
             return true;
+          } else {
+            console.warn(`⚠️ Agent ${this.id} received no valid routes`);
+            return false;
+          }
+        } catch (error) {
+          console.error(`💥 Agent ${this.id} planRoute() error:`, error);
+          return false;
         }
-    
-        return false;
-    }
+      }
     
       
 
@@ -180,8 +195,18 @@ class Agent {
           const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
           const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
           const avgElem = document.getElementById('averageTime');
-          if (avgElem) {
-            avgElem.textContent = `Average Time: ${avg}s`;
+          const distElem = document.getElementById('totalDistance');
+
+          if (avgElem || distElem) {
+            const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
+            const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
+            const totalDistance = arrivedAgents.reduce((sum, a) => sum + a.totalDistance, 0);
+
+            const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
+            const dist = totalDistance.toFixed(2);
+
+            if (avgElem) avgElem.textContent = `${avg}s`;
+            if (distElem) distElem.textContent = `${dist} km`;
           }
         }
       

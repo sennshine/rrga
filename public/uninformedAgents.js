@@ -2,6 +2,7 @@ const AGENT_ICON_URL = 'red-person.png';
 const ARRIVED_ICON_URL = 'green-person.png';
 
 
+
 const REGIONS = {
     Beaufort: { name: "Beaufort", bbox: [115.69, 5.33, 115.76, 5.41] },
     Keningau: { name: "Keningau", bbox: [116.15, 5.32, 116.27, 5.47] },
@@ -102,7 +103,7 @@ class Agent {
     
       
 
-    move() {
+      move() {
         if (this.status === "delayed") {
             const now = Date.now();
             if (now - this.delayStart >= this.panicDelay) {
@@ -110,20 +111,25 @@ class Agent {
                 this.startTime = Date.now();
             } else return;
         }
-
+    
         if (!this.route.length || this.status === "blocked" || this.status === "arrived") return;
-
+    
         const target = this.route[this.routeIndex];
         const [lon, lat] = this.position;
         const [targetLon, targetLat] = target;
-
+    
+        // ✅ Turf.js distance (real-world geodesic)
+        const from = turf.point(this.position);
+        const to = turf.point(target);
+        const dist = turf.distance(from, to, { units: 'kilometers' }); 
+        this.totalDistance += dist;
+    
+        const step = 0.0005;
         const dx = targetLon - lon;
         const dy = targetLat - lat;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        this.totalDistance += dist;
-
-        const step = 0.0005;
-        if (dist < step) {
+        const euclideanDist = Math.sqrt(dx * dx + dy * dy);
+    
+        if (euclideanDist < step) {
             this.position = target;
             this.routeIndex++;
             if (this.routeIndex >= this.route.length) {
@@ -133,10 +139,10 @@ class Agent {
                 return;
             }
         } else {
-            this.position[0] += (dx / dist) * step;
-            this.position[1] += (dy / dist) * step;
+            this.position[0] += (dx / euclideanDist) * step;
+            this.position[1] += (dy / euclideanDist) * step;
         }
-
+    
         this.marker.setLngLat(this.position);
     }
 

@@ -12,6 +12,8 @@
   <!-- Mapbox Directions -->
   <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.js"></script>
   <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.1.1/mapbox-gl-directions.css"/>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
 
   <!-- Global evacuation & road closures -->
   <script>
@@ -42,24 +44,38 @@
     }
 
     h1 {
-      text-align: center;
-      padding: 15px;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(255, 255, 255, 0.95);
+      padding: 10px 20px;
       margin: 0;
-      background-color: #f8f8f8;
       font-size: 24px;
       font-weight: bold;
+      z-index: 9999;
+      width: 100%;
+      max-height: 100px;
+      text-align: center;
       border-bottom: 1px solid #ddd;
+      box-sizing: border-box;
     }
 
     html, body {
+      margin: 0;
+      padding: 0;
       height: 100%;
-      display: flex;
-      flex-direction: column;
+      width: 100%;
     }
 
+
     #map {
-      flex-grow: 1;
+      height: 100%;
       width: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
     }
 
     #sim-controls {
@@ -67,12 +83,12 @@
       bottom: 30px;
       left: 10px;
       z-index: 999;
-      background: rgba(255, 255, 255, 0.902);
+      background: rgba(255, 255, 255, 0);
       padding: 10px;
       border-radius: 8px;
-      box-shadow: 0 0 5px rgba(0,0,0,0.2);
+      box-shadow: 0 0 5px rgba(0, 0, 0, 0);
       max-width: 200px;
-      font-size: 14px;
+      font-size: 14px; 
     }
 
     #sim-controls button {
@@ -81,7 +97,7 @@
       padding: 10px;
       font-size: 16px;
       font-weight: bold;
-      color: white;
+      color: rgb(255, 255, 255);
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -161,6 +177,23 @@
   <div id="sim-controls">
     <button id="startBtn">Start Simulation</button>
     <button id="stopBtn">Stop Simulation</button>
+  </div>
+
+  <!-- Bottom-left Map Legend -->
+  <div id="map-legend">
+    <h4>Map Legend</h4>
+    <div class="legend-item">
+      <img src="red-person.png" alt="Agent" />
+      <span>Agent</span>
+    </div>
+    <div class="legend-item">
+      <img src="gps.png" alt="Evacuation Center" />
+      <span>Evacuation Center</span>
+    </div>
+    <div class="legend-item">
+      <img src="roadblock.png" alt="Road Block" />
+      <span>Road Block</span>
+    </div>
   </div>
 
   <!-- Top-right Table -->
@@ -318,6 +351,36 @@
   #closeModalBtn:hover {
     background-color: #218838;
   }
+
+  #map-legend {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.781);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+#map-legend h4 {
+  margin: 1px 0 6px 0;
+  font-size: 12x;
+  font-weight: bold;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.legend-item img {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+  object-fit: contain;
+}
   
 </style>
 </body>

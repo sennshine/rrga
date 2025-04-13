@@ -1,5 +1,7 @@
 const AGENT_ICON_URL = 'red-person.png';
 const ARRIVED_ICON_URL = 'green-person.png';
+let simulationStartTime = null;
+let simTimerInterval = null;
 
 
 
@@ -202,6 +204,7 @@ class Agent {
           const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
           const avgElem = document.getElementById('averageTime');
           const distElem = document.getElementById('totalDistance');
+          const arrivedCountElem = document.getElementById('arrivedCount');
 
           if (avgElem || distElem) {
             const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
@@ -209,10 +212,11 @@ class Agent {
             const totalDistance = arrivedAgents.reduce((sum, a) => sum + a.totalDistance, 0);
 
             const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
-            const dist = totalDistance.toFixed(2);
+            const avgDistance = (totalDistance / arrivedAgents.length).toFixed(2);
 
             if (avgElem) avgElem.textContent = `${avg}s`;
-            if (distElem) distElem.textContent = `${dist} km`;
+            if (distElem) distElem.textContent = `${avgDistance} km`;
+            if (arrivedCountElem) arrivedCountElem.textContent = arrivedAgents.length;
           }
         }
       
@@ -249,6 +253,9 @@ class Agent {
 async function initAgentSimulation() {
     clearAgents();
 
+    simulationStartTime = Date.now();
+    startSimTimer();
+
     const countElem = document.getElementById('arrivedCount');
     if (countElem) countElem.textContent = `Arrived: 0`;
 
@@ -264,11 +271,27 @@ async function initAgentSimulation() {
         const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);
         await agent.planRoute();
         agents.push(agent);
+
     }
+    setTimeout(() => {
+        if (simulationRunning) {
+          simulationRunning = false;
+          if (animationFrameId) cancelAnimationFrame(animationFrameId);
+          if (simTimerInterval) clearInterval(simTimerInterval);
+          showTimedOutSummary(); // ⬅️ new function
+        }
+      }, 60000); // 60,000ms = 60 seconds
 
     animateAgents();
 }
 
+function startSimTimer() {
+    const simTimeElem = document.getElementById('simTime');
+    simTimerInterval = setInterval(() => {
+      const elapsed = (Date.now() - simulationStartTime) / 1000;
+      simTimeElem.textContent = `${elapsed.toFixed(2)}s`;
+    }, 500);
+  }
 
 function animateAgents() {
     let allDone = true;
@@ -322,6 +345,11 @@ function showSimulationCompleteModal() {
     closeBtn.onclick = () => {
       modal.style.display = "none";
     };
+
+    if (simTimerInterval) {
+        clearInterval(simTimerInterval);
+        simTimerInterval = null;
+      }
   
     // Optional: Close on outside click
     window.onclick = (e) => {
@@ -330,7 +358,29 @@ function showSimulationCompleteModal() {
       }
     };
   }
-  
+
+function showTimedOutSummary() {
+  const modal = document.getElementById("completionModal");
+  const summaryElem = document.getElementById("modalSummary");
+
+  const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
+  const successRate = (arrivedAgents.length / agents.length * 100).toFixed(2);
+
+  const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
+  const totalDistance = arrivedAgents.reduce((sum, a) => sum + a.totalDistance, 0);
+
+  const avgTime = arrivedAgents.length > 0 ? (totalSeconds / arrivedAgents.length / 1000).toFixed(2) : "N/A";
+  const avgDistance = arrivedAgents.length > 0 ? (totalDistance / arrivedAgents.length).toFixed(2) : "N/A";
+
+  summaryElem.innerHTML = `
+    <p><strong>⏱ Simulation timed out after 60s</strong></p>
+    <p>✅ <strong>Evacuation Success Rate:</strong> ${successRate}%</p>
+    <p>🕒 <strong>Average Time Taken:</strong> ${avgTime} seconds</p>
+    <p>📏 <strong>Average Distance Travelled:</strong> ${avgDistance} km</p>
+  `;
+
+  modal.style.display = "flex";
+}
 
 document.getElementById("stopBtn").addEventListener("click", () => {
     simulationRunning = false;

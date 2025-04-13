@@ -48,12 +48,12 @@
       top: 0;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(255, 255, 255, 0.95);
+      background-color: rgba(255, 255, 255, 0.856);
       padding: 10px 20px;
       margin: 0;
       font-size: 24px;
       font-weight: bold;
-      z-index: 9999;
+      z-index: 30;
       width: 100%;
       max-height: 100px;
       text-align: center;
@@ -75,12 +75,12 @@
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 0;
+      z-index: 20;
     }
 
     #sim-controls {
       position: absolute;
-      bottom: 30px;
+      bottom: 10px;
       left: 10px;
       z-index: 999;
       background: rgba(255, 255, 255, 0);
@@ -118,7 +118,7 @@
 
     #table-wrapper {
       position: absolute;
-      top: 70px;
+      top: 50px;
       right: 40px;
       z-index: 999;
       width: 360px;
@@ -171,6 +171,13 @@
 </head>
 <body>
   <h1>Uninformed Agents Simulation</h1>
+  <!-- Top-left Controls -->
+  <div id="top-right-info">
+    <div><strong>Simulation Time:</strong> <span id="simTime">0.00s</span></div>
+    <div><strong>Arrived:</strong> <span id="arrivedCount">0</span></div>
+  </div>
+  
+
   <div id="map"></div>
 
   <!-- Bottom-left Controls -->
@@ -213,10 +220,19 @@
     </div>
     <div class="table-footer">
       <span><strong>Average Time:</strong> <span id="averageTime">0.00s</span></span>
-      <span><strong>Total Distance:</strong> <span id="totalDistance">0.00 km</span></span>
+      <span><strong>Average Distance Travelled:</strong> <span id="totalDistance">0.00 km</span></span>
     </div>
   </div>
   
+  <div id="completionModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h2>📊 Simulation Summary</h2>
+      <div id="modalSummary">
+        <p>Simulation completed normally.</p>
+      </div>
+      <button id="closeModalBtn">Close</button>
+    </div>
+  </div>
 
   <script>
     mapboxgl.accessToken = 'pk.eyJ1Ijoid3NuYzAiLCJhIjoiY204eDR2eXM1MDBoeDJrb3RxcWcycGh0MSJ9.RrkeTWJCa3lhoQJsTq_EBQ';
@@ -321,8 +337,8 @@
     z-index: 9999;
     left: 0;
     top: 0;
-    width: 80%;
-    height: 80%;
+    width: 100%;
+    height: 100%;
     background-color: rgba(0,0,0,0.6);
     display: flex;
     justify-content: center;
@@ -352,6 +368,19 @@
     background-color: #218838;
   }
 
+  #top-right-info {
+    position: absolute;
+    top: 50px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.92);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 999;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    font-weight: bold;
+  }
+
   #map-legend {
   position: absolute;
   bottom: 20px;
@@ -360,6 +389,7 @@
   padding: 10px 12px;
   border-radius: 8px;
   font-size: 12px;
+  z-index: 999;
   box-shadow: 0 0 5px rgba(0,0,0,0.2);
 }
 

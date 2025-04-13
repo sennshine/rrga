@@ -377,7 +377,12 @@ function initMap() {
             const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${agent.position[0]},${agent.position[1]};${site.coordinates[0]},${site.coordinates[1]}?geometries=geojson&access_token=${mapboxgl.accessToken}`;
             
             try {
+                const startTime = performance.now();
                 const response = await fetch(url);
+                const endTime = performance.now();  
+
+                console.log(`API response time for Agent ${agent.id} to ${site.name}: ${(endTime - startTime).toFixed(2)} ms`);
+                
                 const data = await response.json();
                 
                 if (data.routes && data.routes.length > 0) {
@@ -712,12 +717,13 @@ function initMap() {
                 
                 const averageTime = totalTime / finishedAgents.length;
                 
-                // Update the table footer with totals and average
+                const averageDistance = totalDistance / finishedAgents.length;
+                // Update the table footer with averages
                 const tableFooter = document.getElementById('tableFooter');
                 if (tableFooter) {
                     tableFooter.innerHTML = `
                         <td colspan="2" style="text-align:right"><strong>Average Time: ${averageTime.toFixed(2)}s</strong></td>
-                        <td colspan="2" style="text-align:right"><strong>Total Distance: ${totalDistance.toFixed(2)} km</strong></td>
+                        <td colspan="2" style="text-align:right"><strong>Average Distance: ${averageDistance.toFixed(2)} km</strong></td>
                     `;
                 }
             }

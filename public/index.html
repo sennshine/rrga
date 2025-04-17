@@ -161,20 +161,78 @@
             display: none;
         }
         
-
-        /* Timer styling - positioned at top left corner */
-        #timer {
-            background-color: white;
-            border-radius: 5px;
-            padding: 8px 12px;
-            margin: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        /* Weather Info Table Styling */
+        #weather-info-container {
             position: absolute;
             top: 10px;
             left: 10px;
+            z-index: 5;
+            min-width: 250px;
+            transition: all 0.3s ease;
+        }
+
+        #weather-info-table {
+            border-collapse: collapse;
+            width: 100%;
+            background-color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 5px;
+            overflow: hidden;
+            font-size: 14px;
+        }
+
+        #weather-info-table th,
+        #weather-info-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+
+        #weather-info-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        .flood-warning {
+            color: white;
+            background-color: #dc3545;
+            padding: 5px 8px;
+            border-radius: 0 0 5px 5px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: -1px;
+            display: none;
+        }
+
+        .weather-warning {
+            background-color: #ffcdd2 !important;
+        }
+
+        /* Timer and Arrived Counter */
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .info-box {
+            background-color: white;
+            border-radius: 5px;
+            padding: 8px 12px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
             font-size: 14px;
             font-weight: bold;
-            z-index: 5;
+        }
+        
+        /* Original timer styling (now removed) */
+        #timer {
+            display: none; /* Hide the original timer */
+        }
+        
+        /* Original arrived counter (now removed) */
+        #arrived-counter {
+            display: none; /* Hide the original counter */
         }
         
         /* Table styling - adjusted to not block zoom controls */
@@ -218,17 +276,6 @@
             flex-direction: column;
         }
         
-        /* Arrived counter */
-        #arrived-counter {
-            background-color: white;
-            border-radius: 5px;
-            padding: 8px 12px;
-            margin-top: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            font-size: 14px;
-            font-weight: bold;
-        }
-        
         /* Ensure Mapbox controls aren't blocked */
         .mapboxgl-ctrl-top-right {
             z-index: 6; /* Higher than the table */
@@ -239,7 +286,34 @@
     <div class="header-title">Simulation of Users Evacuating</div>
     
     <div id="map">
-        <!-- Timer display (positioned at top-left) -->
+        <!-- Weather Info Table -->
+        <div id="weather-info-container">
+            <table id="weather-info-table">
+                <thead>
+                    <tr>
+                        <th>Rainfall<br>(mm/hr)</th>
+                        <th>Humidity<br>(%)</th>
+                        <th>Atmospheric Pressure<br>(hPa)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="rainfall">-</td>
+                        <td id="humidity">-</td>
+                        <td id="pressure">-</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div id="flood-warning" class="flood-warning">! Early Flooding Warning!</div>
+            
+            <!-- Timer and Arrived Counter -->
+            <div class="info-container">
+                <div id="timer-box" class="info-box">Simulation Time: 0:00</div>
+                <div id="arrived-box" class="info-box">Arrived: 0</div>
+            </div>
+        </div>
+        
+        <!-- Original Timer (now hidden) -->
         <div id="timer">Time: 0:00</div>
         
         <!-- Top-right Table (moved to not block zoom controls) -->

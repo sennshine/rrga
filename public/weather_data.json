@@ -1,0 +1,39 @@
+[
+    {
+      "precipitation_mm/hr": 9,
+      "humidity_percent": 78,
+      "pressure_hPa": 1005,
+      "flood_alert": false
+    },
+    {
+      "precipitation_mm/hr": 16,
+      "humidity_percent": 88,
+      "pressure_hPa": 998,
+      "flood_alert": true
+    },
+    {
+      "precipitation_mm/hr": 26,
+      "humidity_percent": 91,
+      "pressure_hPa": 997,
+      "flood_alert": true
+    },
+    {
+      "precipitation_mm/hr": 28,
+      "humidity_percent": 87,
+      "pressure_hPa": 996,
+      "flood_alert": true
+    },
+    {
+      "precipitation_mm/hr": 45,
+      "humidity_percent": 89,
+      "pressure_hPa": 994,
+      "flood_alert": true
+    },
+    {
+      "precipitation_mm/hr": 30,
+      "humidity_percent": 92,
+      "pressure_hPa": 991,
+      "flood_alert": true
+    }
+  ]
+  

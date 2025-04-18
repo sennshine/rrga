@@ -284,7 +284,7 @@ async function initAgentSimulation() {
           if (simTimerInterval) clearInterval(simTimerInterval);
           showTimedOutSummary(); // ⬅️ new function
         }
-      }, 60000); // 60,000ms = 60 seconds
+      }, 30000); // 60,000ms = 60 seconds
 
     animateAgents();
 }
@@ -312,7 +312,7 @@ function animateAgents() {
         animationFrameId = requestAnimationFrame(animateAgents);
     } else {
         showMetricsSummary();
-        showSimulationCompleteModal(); // 🎯 Trigger modal
+        // showSimulationCompleteModal(); // 🎯 Trigger modal
     }
 }
 
@@ -332,7 +332,28 @@ function clearAgents() {
 function showMetricsSummary() {
     const results = agents.map(agent => agent.getMetrics());
     console.table(results);
+
+
+    if (simTimerInterval) {
+      clearInterval(simTimerInterval);
+      simTimerInterval = null;
+    }
+
 }
+
+const closeBtn = document.getElementById("closeModalBtn");
+const modal = document.getElementById("completionModal");
+
+closeBtn.onclick = () => {
+  modal.style.display = "none";
+};
+
+// Optional: Close on outside click
+window.onclick = (e) => {
+  if (e.target === modal) {
+    modal.style.display = "none";
+  }
+};
 
 document.getElementById("startBtn").addEventListener("click", () => {
     if (!simulationRunning) {
@@ -341,27 +362,6 @@ document.getElementById("startBtn").addEventListener("click", () => {
     }
 });
 
-function showSimulationCompleteModal() {
-    const modal = document.getElementById("completionModal");
-    modal.style.display = "flex";
-  
-    const closeBtn = document.getElementById("closeModalBtn");
-    closeBtn.onclick = () => {
-      modal.style.display = "none";
-    };
-
-    if (simTimerInterval) {
-        clearInterval(simTimerInterval);
-        simTimerInterval = null;
-      }
-  
-    // Optional: Close on outside click
-    window.onclick = (e) => {
-      if (e.target === modal) {
-        modal.style.display = "none";
-      }
-    };
-  }
 
 function showTimedOutSummary() {
   const modal = document.getElementById("completionModal");
@@ -377,7 +377,7 @@ function showTimedOutSummary() {
   const avgDistance = arrivedAgents.length > 0 ? (totalDistance / arrivedAgents.length).toFixed(2) : "N/A";
 
   summaryElem.innerHTML = `
-    <p><strong>⏱ Simulation timed out after 60s</strong></p>
+    <p><strong>⏱ Simulation timed out after 30s</strong></p>
     <p>✅ <strong>Evacuation Success Rate:</strong> ${successRate}%</p>
     <p>🕒 <strong>Average Time Taken:</strong> ${avgTime} seconds</p>
     <p>📏 <strong>Average Distance Travelled:</strong> ${avgDistance} km</p>

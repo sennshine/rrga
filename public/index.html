@@ -192,6 +192,21 @@
     .mapboxgl-ctrl-attrib {
       display: none !important;
     }
+
+    .panic {
+      animation: shake 30s infinite;
+      display: inline-block;
+    }
+
+    @keyframes shake {
+      0%   { transform: translate(0px, 0px); }
+      25%  { transform: translate(1px, -1px); }
+      50%  { transform: translate(-1px, 1px); }
+      75%  { transform: translate(1px, 1px); }
+      100% { transform: translate(-1px, -1px); }
+    }
+
+
   </style>
 </head>
 <body>
@@ -347,14 +362,6 @@
       });
     });
   </script>
-  <!-- Simulation Complete Modal -->
-<div id="completionModal" class="modal" style="display:none;">
-  <div class="modal-content">
-    <h2>✅ Simulation Complete</h2>
-    <p>All agents have successfully evacuated to safety.</p>
-    <button id="closeModalBtn">Close</button>
-  </div>
-</div>
 
 <style>
   .modal {

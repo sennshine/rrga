@@ -265,7 +265,11 @@ async function initAgentSimulation() {
         const { id, coordinates, region } = agentData;
 
         // Filter evacuation sites by region
-        const possibleSites = evacuationSites.filter(site => site.area === region);
+        const possibleSites = evacuationSites.filter(site => site.area.toLowerCase() === region.toLowerCase());
+        if (!possibleSites.length) {
+          console.warn(`⚠️ No evacuation site found for region: ${region} (Agent ID: ${id})`);
+          continue; // Skip this agent if no matching site
+        }
         const evacSite = possibleSites[Math.floor(Math.random() * possibleSites.length)];
 
         const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);

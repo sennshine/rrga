@@ -126,7 +126,7 @@ class Agent {
         const dist = turf.distance(from, to, { units: 'kilometers' }); 
         this.totalDistance += dist;
     
-        const step = 0.0005;
+        const step = 0.00015;
         const dx = targetLon - lon;
         const dy = targetLat - lat;
         const euclideanDist = Math.sqrt(dx * dx + dy * dy);
@@ -179,8 +179,8 @@ class Agent {
                 }
     
                 // Retry later
-                console.warn(`Agent ${this.id} stuck — retrying reroute in 3s...`);
-                setTimeout(() => this.checkAndReroute(), 3000);
+                console.warn(`Agent ${this.id} stuck — retrying reroute in 8s...`);
+                setTimeout(() => this.checkAndReroute(), 8000);
             } else {
                 this.rerouteCount++;
             }

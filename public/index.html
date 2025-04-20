@@ -17,6 +17,9 @@
 
   <!-- Global evacuation & road closures -->
   <script>
+    const MAX_CAPACITY = 6;
+    const YELLOW_THRESHOLD = 3;
+
     window.evacuationSites = [
       { name: "Dewan Selagon", area: "Beaufort", coordinates: [115.73937904860162, 5.398396950885243] },
       { name: "Dewan PSP Dun Banir", area: "Beaufort", coordinates: [115.7334127282223, 5.3549036708753235] },
@@ -47,7 +50,16 @@
       { name: "Masjid Al-Rahman", area: "Tenom", coordinates: [115.94538232767745, 5.125681776495361] },
       { name: "Kompleks Sukan Tenom", area: "Tenom", coordinates: [115.9405000319466, 5.119091832525258] },
       { name: "Dewan Perniagaan Tionghua", area: "Tenom", coordinates: [115.94500374117237, 5.1230327476119] }
+
     ];
+
+    // Extend each site with tracking properties
+    window.evacuationSites = window.evacuationSites.map(site => ({
+      ...site,
+      occupancy: 0,
+      isFull: false,
+      marker: null
+    }));
   
     window.roadClosures = [
       { name: "Jalan Keningau-Kimanis", start: [116.069627, 5.459655], end: [116.097359, 5.395954] },
@@ -361,36 +373,6 @@
       });
     }
 
-    map.on('load', () => {
-      window.evacuationSites.forEach(site => {
-        new mapboxgl.Marker({ color: '#00FF00' })
-          .setLngLat(site.coordinates)
-          .setPopup(new mapboxgl.Popup().setHTML(`<strong>${site.name}</strong><br>${site.area}`))
-          .addTo(map);
-      });
-
-      window.roadClosures.forEach(road => {
-        drawBlockedRoad(road);
-        addRoadblockMarker(road.start);
-        addRoadblockMarker(road.end);
-      });
-
-      map.addSource('route', {
-        type: 'geojson',
-        data: {
-          type: 'Feature',
-          geometry: { type: 'LineString', coordinates: [] }
-        }
-      });
-
-      map.addLayer({
-        id: 'route',
-        type: 'line',
-        source: 'route',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#ff0000', 'line-width': 5 }
-      });
-    });
   </script>
 
 <style>

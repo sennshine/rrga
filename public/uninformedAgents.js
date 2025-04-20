@@ -29,6 +29,29 @@ async function loadAgentSpawnLocations() {
     return data;
 }
 
+async function initializeAgentsOnly() {
+  clearAgents(); // Reset any old agents
+
+  const spawnData = await loadAgentSpawnLocations();
+
+  for (const agentData of spawnData) {
+    const { id, coordinates, region } = agentData;
+
+    // Pick a random evacuation site from the same region
+    const possibleSites = evacuationSites.filter(site =>
+      site.area.toLowerCase() === region.toLowerCase()
+    );
+    if (!possibleSites.length) continue;
+
+    const evacSite = possibleSites[Math.floor(Math.random() * possibleSites.length)];
+
+    // ✅ Create agent and add to map
+    const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);
+    agents.push(agent); // Add to global agents list (renders marker)
+  }
+}
+
+
 
 let agents = [];
 let animationFrameId = null;
@@ -126,7 +149,7 @@ class Agent {
         const dist = turf.distance(from, to, { units: 'kilometers' }); 
         this.totalDistance += dist;
     
-        const step = 0.00035;
+        const step = 0.0001;
         const dx = targetLon - lon;
         const dy = targetLat - lat;
         const euclideanDist = Math.sqrt(dx * dx + dy * dy);
@@ -189,50 +212,52 @@ class Agent {
     
 
     visualizeArrival() {
-        const newMarker = new mapboxgl.Marker({
-          element: this.createIcon(true),
-          rotationAlignment: 'map',
-        }).setLngLat(this.position).addTo(map);
-      
-        this.marker.remove();
-        this.marker = newMarker;
-      
-        // Update Average Time in UI
-        const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
-        if (arrivedAgents.length > 0) {
+      // ✅ Add occupancy tracking first
+      const evacSite = window.evacuationSites.find(site =>
+          site.name === this.evacuationSiteName && site.area === this.centerName
+      );
+      if (evacSite) {
+          evacSite.occupancy = (evacSite.occupancy || 0) + 1;
+          updateEvacuationCenterStatus(evacSite);  // 🔁 update icon & isFull flag
+      }
+  
+      // 🧍‍♂️ Change agent icon to "arrived"
+      // Just update icon — don't add a new marker
+      const el = this.marker.getElement();
+      el.src = ARRIVED_ICON_URL;
+
+  
+      // 📊 Update stats
+      const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
+      if (arrivedAgents.length > 0) {
           const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
           const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
           const avgElem = document.getElementById('averageTime');
           const distElem = document.getElementById('totalDistance');
           const arrivedCountElem = document.getElementById('arrivedCount');
-
-          if (avgElem || distElem) {
-            const arrivedAgents = agents.filter(a => a.status === "arrived" && a.startTime && a.endTime);
-            const totalSeconds = arrivedAgents.reduce((sum, a) => sum + (a.endTime - a.startTime), 0);
-            const totalDistance = arrivedAgents.reduce((sum, a) => sum + a.totalDistance, 0);
-
-            const avg = (totalSeconds / arrivedAgents.length / 1000).toFixed(2);
-            const avgDistance = (totalDistance / arrivedAgents.length).toFixed(2);
-
-            if (avgElem) avgElem.textContent = `${avg}s`;
-            if (distElem) distElem.textContent = `${avgDistance} km`;
-            if (arrivedCountElem) arrivedCountElem.textContent = arrivedAgents.length;
-          }
-        }
-      
-        // Append to top-right table
-        const table = document.getElementById('arrivalTableBody');
-        if (table) {
+  
+          const totalDistance = arrivedAgents.reduce((sum, a) => sum + a.totalDistance, 0);
+          const avgDistance = (totalDistance / arrivedAgents.length).toFixed(2);
+  
+          if (avgElem) avgElem.textContent = `${avg}s`;
+          if (distElem) distElem.textContent = `${avgDistance} km`;
+          if (arrivedCountElem) arrivedCountElem.textContent = arrivedAgents.length;
+      }
+  
+      // 🧾 Log to table
+      const table = document.getElementById('arrivalTableBody');
+      if (table) {
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td>${this.id}</td>
-            <td>${this.centerName}</td>
-            <td>${((this.endTime - this.startTime) / 1000).toFixed(2)}s</td>
-            <td>${this.totalDistance.toFixed(4)}</td>
+              <td>${this.id}</td>
+              <td>${this.centerName}</td>
+              <td>${((this.endTime - this.startTime) / 1000).toFixed(2)}s</td>
+              <td>${this.totalDistance.toFixed(4)}</td>
           `;
           table.appendChild(row);
-        }
       }
+  }
+  
       
 
     removeMarker() {
@@ -251,7 +276,6 @@ class Agent {
 }
 
 async function initAgentSimulation() {
-    clearAgents();
 
     simulationStartTime = Date.now();
     startSimTimer();
@@ -270,7 +294,15 @@ async function initAgentSimulation() {
           console.warn(`⚠️ No evacuation site found for region: ${region} (Agent ID: ${id})`);
           continue; // Skip this agent if no matching site
         }
-        const evacSite = possibleSites[Math.floor(Math.random() * possibleSites.length)];
+        const availableSites = possibleSites.filter(site => !site.isFull && site.occupancy < MAX_CAPACITY);
+
+        if (!availableSites.length) {
+            console.warn(`⚠️ No available (non-full) evacuation site for region: ${region} (Agent ID: ${id})`);
+            continue;
+        }
+
+        const evacSite = availableSites[Math.floor(Math.random() * availableSites.length)];
+
 
         const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);
         await agent.planRoute();
@@ -296,6 +328,24 @@ function startSimTimer() {
       simTimeElem.textContent = `${elapsed.toFixed(2)}s`;
     }, 500);
   }
+
+function updateEvacuationCenterStatus(site) {
+  if (!site.marker) return;
+
+  const el = site.marker.getElement();
+
+  if (site.occupancy >= MAX_CAPACITY) {
+    site.isFull = true;
+    el.style.backgroundImage = 'url("/red-icon.png")'; // 🔴
+  } else if (site.occupancy >= YELLOW_THRESHOLD) {
+    site.isFull = false;
+    el.style.backgroundImage = 'url("/yellow-icon.png")'; // 🟡
+  } else {
+    site.isFull = false;
+    el.style.backgroundImage = 'url("/gps.png")'; // 🟢 default
+  }
+}
+
 
 function animateAgents() {
     let allDone = true;
@@ -375,9 +425,14 @@ function updateWeatherTable(index) {
 window.addEventListener("DOMContentLoaded", async () => {
   const loaded = await loadWeatherData();
   if (loaded) {
-    updateWeatherTable(0); // 👈 Show first row immediately
+    updateWeatherTable(0); // Show first row immediately
   }
+  await initializeAgentsOnly();
+
 });
+
+
+
 
 function startWeatherUpdates() {
   currentWeatherIndex = 1; // Start from second row
@@ -424,9 +479,38 @@ window.onclick = (e) => {
 
 document.getElementById("startBtn").addEventListener("click", () => {
   if (!simulationRunning && weatherData.length > 1) {
+
+    // 1. Show roadblocks only now
+    window.roadClosures.forEach(road => {
+      drawBlockedRoad(road);
+      addRoadblockMarker(road.start);
+      addRoadblockMarker(road.end);
+    });
+
+    // 2. Show evacuation centers now
+    window.evacuationSites.forEach(site => {
+      const el = document.createElement('div');
+      el.className = 'evacuation-center-marker';
+      el.style.width = '40px';
+      el.style.height = '40px';
+      el.style.backgroundSize = 'cover';
+      el.style.backgroundRepeat = 'no-repeat';
+      el.style.backgroundPosition = 'center';
+      el.style.backgroundImage = 'url("/gps.png")'; // Default green
+
+      const marker = new mapboxgl.Marker(el)
+        .setLngLat(site.coordinates)
+        .setPopup(new mapboxgl.Popup().setText(site.name))
+        .addTo(map);
+
+      site.marker = marker;
+    });
+
+    // Continue simulation
     startWeatherUpdates(); // Will show 2nd row, trigger flood warning + agents
   }
 });
+
 
 
 
@@ -444,10 +528,10 @@ function showTimedOutSummary() {
   const avgDistance = arrivedAgents.length > 0 ? (totalDistance / arrivedAgents.length).toFixed(2) : "N/A";
 
   summaryElem.innerHTML = `
-    <p><strong>⏱ Simulation timed out after 30s</strong></p>
-    <p>✅ <strong>Evacuation Success Rate:</strong> ${successRate}%</p>
-    <p>🕒 <strong>Average Time Taken:</strong> ${avgTime} seconds</p>
-    <p>📏 <strong>Average Distance Travelled:</strong> ${avgDistance} km</p>
+    <p><strong>Simulation timed out after 30s</strong></p>
+    <p><strong>Evacuation Success Rate:</strong> ${successRate}%</p>
+    <p><strong>Average Time Taken:</strong> ${avgTime} seconds</p>
+    <p><strong>Average Distance Travelled:</strong> ${avgDistance} km</p>
   `;
 
   modal.style.display = "flex";
@@ -457,3 +541,26 @@ document.getElementById("stopBtn").addEventListener("click", () => {
     simulationRunning = false;
     if (animationFrameId) cancelAnimationFrame(animationFrameId);
 });
+
+map.on('load', async () => {
+  // Add route source and layer
+  map.addSource('route', {
+    type: 'geojson',
+    data: {
+      type: 'Feature',
+      geometry: { type: 'LineString', coordinates: [] }
+    }
+  });
+
+  map.addLayer({
+    id: 'route',
+    type: 'line',
+    source: 'route',
+    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    paint: { 'line-color': '#ff0000', 'line-width': 5 }
+  });
+
+  // 👇 Initialize agents to appear before simulation
+  await initializeAgentsOnly(); 
+});
+

@@ -73,7 +73,7 @@
       top: 0;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(255, 255, 255, 0.856);
+      background-color: rgb(255, 255, 255);
       padding: 10px 20px;
       margin: 0;
       font-size: 24px;
@@ -193,6 +193,11 @@
       display: none !important;
     }
 
+    .mapboxgl-ctrl-top-right {
+      top: 40px !important;  /* ⬅️ Adjust this number as needed */
+    }
+
+
     .panic {
       animation: shake 30s infinite;
       display: inline-block;
@@ -219,6 +224,31 @@
   
 
   <div id="map"></div>
+
+  <!-- Weather Data Table -->
+  <div id="weather-info-table" class="weather-table">
+    <table>
+      <thead>
+        <tr>
+          <th><span>Rainfall<br><small>(mm/hr)</small></span></th>
+          <th><span>Humidity<br><small>(%)</small></span></th>
+          <th><span>Atmospheric Pressure<br><small>(hPa)</small></span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="rainfall">–</td>
+          <td id="humidity">–</td>
+          <td id="pressure">–</td>
+        </tr>
+      </tbody>
+    </table>
+    <div id="flood-warning" style="display:none; background:red; color:white; padding:5px; text-align:center;">
+      ! Early Flooding Warning!
+    </div>
+  </div>
+  
+
 
   <!-- Bottom-left Controls -->
   <div id="sim-controls">
@@ -364,6 +394,34 @@
   </script>
 
 <style>
+  .weather-table {
+    position: absolute;
+    top: 50px;
+    left: 20px;
+    z-index: 1000;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    font-size: 14px;
+    overflow: hidden;
+  }
+
+  .weather-table table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .weather-table th,
+  .weather-table td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: center;
+  }
+
+  .weather-warning {
+    background-color: #ffe1e1 !important;
+  }
+
   .modal {
     position: fixed;
     z-index: 9999;
@@ -402,7 +460,7 @@
 
   #top-right-info {
     position: absolute;
-    top: 50px;
+    top: 150px;
     left: 20px;
     background: rgba(255, 255, 255, 0.92);
     padding: 8px 12px;

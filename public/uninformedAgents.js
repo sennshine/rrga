@@ -327,6 +327,74 @@ function clearAgents() {
     if (countElem) countElem.textContent = `Arrived: 0`;
   }
   
+let weatherData = [];
+let currentWeatherIndex = 0;
+let weatherUpdateInterval = null;
+
+async function loadWeatherData() {
+  try {
+    const response = await fetch('weather_data.json');
+    if (!response.ok) throw new Error(`Failed to load weather data: ${response.status}`);
+    weatherData = await response.json();
+    if (weatherData.length === 0) throw new Error('No weather data found in the JSON file');
+    console.log('✅ Weather data loaded:', weatherData);
+    return true;
+  } catch (error) {
+    console.error('💥 Weather loading error:', error);
+    alert('Failed to load weather data. See console for details.');
+    return false;
+  }
+}
+
+
+function updateWeatherTable(index) {
+  if (!weatherData || index >= weatherData.length) return;
+
+  const data = weatherData[index];
+  document.getElementById('rainfall').textContent = data['precipitation_mm/hr'];
+  document.getElementById('humidity').textContent = data['humidity_percent'];
+  document.getElementById('pressure').textContent = data['pressure_hPa'];
+
+  const table = document.getElementById('weather-info-table');
+  const floodWarning = document.getElementById('flood-warning');
+
+  if (data['flood_alert']) {
+      table.classList.add('weather-warning');
+      floodWarning.style.display = 'block';
+
+      if (index === 1 && !simulationRunning) {
+          simulationRunning = true;
+          initAgentSimulation();  // Start agents here
+      }
+  } else {
+      table.classList.remove('weather-warning');
+      floodWarning.style.display = 'none';
+  }
+}
+
+window.addEventListener("DOMContentLoaded", async () => {
+  const loaded = await loadWeatherData();
+  if (loaded) {
+    updateWeatherTable(0); // 👈 Show first row immediately
+  }
+});
+
+function startWeatherUpdates() {
+  currentWeatherIndex = 1; // Start from second row
+  updateWeatherTable(currentWeatherIndex);
+
+  weatherUpdateInterval = setInterval(() => {
+      currentWeatherIndex++;
+      if (currentWeatherIndex < weatherData.length) {
+          updateWeatherTable(currentWeatherIndex);
+      } else {
+          clearInterval(weatherUpdateInterval);
+      }
+  }, 5000); // ⏱ 5 seconds interval
+}
+
+
+
 
 function showMetricsSummary() {
     const results = agents.map(agent => agent.getMetrics());
@@ -355,11 +423,11 @@ window.onclick = (e) => {
 };
 
 document.getElementById("startBtn").addEventListener("click", () => {
-    if (!simulationRunning) {
-        simulationRunning = true;
-        initAgentSimulation();
-    }
+  if (!simulationRunning && weatherData.length > 1) {
+    startWeatherUpdates(); // Will show 2nd row, trigger flood warning + agents
+  }
 });
+
 
 
 function showTimedOutSummary() {

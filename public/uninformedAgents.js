@@ -34,10 +34,18 @@ async function initializeAgentsOnly() {
 
   const spawnData = await loadAgentSpawnLocations();
 
-  for (const agentData of spawnData) {
-    const { id, coordinates, region } = agentData;
+  const usedCoords = new Set(); // Track unique coords
+  let count = 0;
 
-    // Pick a random evacuation site from the same region
+  for (const agentData of spawnData) {
+    if (count >= 50) break;
+
+    const { id, coordinates, region } = agentData;
+    const coordKey = JSON.stringify(coordinates);
+
+    if (usedCoords.has(coordKey)) continue;
+    usedCoords.add(coordKey);
+
     const possibleSites = evacuationSites.filter(site =>
       site.area.toLowerCase() === region.toLowerCase()
     );
@@ -45,11 +53,15 @@ async function initializeAgentsOnly() {
 
     const evacSite = possibleSites[Math.floor(Math.random() * possibleSites.length)];
 
-    // ✅ Create agent and add to map
     const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);
-    agents.push(agent); // Add to global agents list (renders marker)
+    agents.push(agent);
+    count++;
   }
+
+  console.log(`✅ Initialized ${agents.length} unique agents`);
 }
+
+
 
 
 
@@ -70,7 +82,7 @@ class Agent {
         this.route = [];
         this.routeIndex = 0;
 
-        this.panicDelay = Math.random() * 5000;
+        this.panicDelay = 5000; // All agents wait exactly 5 seconds
         this.delayStart = Date.now();
 
         this.startTime = null;
@@ -128,7 +140,7 @@ class Agent {
     
       
 
-      move() {
+      async move() {
         if (this.status === "delayed") {
             const now = Date.now();
             if (now - this.delayStart >= this.panicDelay) {
@@ -140,6 +152,7 @@ class Agent {
         if (!this.route.length || this.status === "blocked" || this.status === "arrived") return;
     
         const target = this.route[this.routeIndex];
+        if (!target || !Array.isArray(target)) return;
         const [lon, lat] = this.position;
         const [targetLon, targetLat] = target;
     
@@ -149,7 +162,7 @@ class Agent {
         const dist = turf.distance(from, to, { units: 'kilometers' }); 
         this.totalDistance += dist;
     
-        const step = 0.0001;
+        const step = 0.00001;
         const dx = targetLon - lon;
         const dy = targetLat - lat;
         const euclideanDist = Math.sqrt(dx * dx + dy * dy);
@@ -158,11 +171,29 @@ class Agent {
             this.position = target;
             this.routeIndex++;
             if (this.routeIndex >= this.route.length) {
-                this.status = "arrived";
-                this.endTime = Date.now();
-                this.visualizeArrival();
+              // Check again if the destination is full before finalizing arrival
+              const destinationSite = evacuationSites.find(site =>
+                  site.name === this.evacuationSiteName && site.area === this.centerName
+              );
+          
+              if (
+                destinationSite &&
+                Array.isArray(destinationSite.coordinates) &&
+                destinationSite.isFull
+              ) {
+                console.log(`🚫 Agent ${this.id} arrived at a full center. Attempting reroute.`);
+                this.triedDestinations.add(JSON.stringify(destinationSite.coordinates));
+                await this.checkAndReroute(); // Try to find alternative
                 return;
-            }
+              }
+              
+          
+              this.status = "arrived";
+              this.endTime = Date.now();
+              this.visualizeArrival();
+              return;
+          }
+          
         } else {
             this.position[0] += (dx / euclideanDist) * step;
             this.position[1] += (dy / euclideanDist) * step;
@@ -172,43 +203,54 @@ class Agent {
     }
 
     async checkAndReroute() {
-        if (this.status !== "moving") return;
-        if (!this.route || this.routeIndex >= this.route.length) return;
-    
-        const currentPoint = this.route[this.routeIndex];
-    
-        // Only reroute if the current point is near a roadblock
-        if (checkForBlockedRoads([currentPoint])) {
-            console.log(`Agent ${this.id} encountered a road block.`);
-    
-            this.triedDestinations.add(JSON.stringify(this.destination));
-            const success = await this.planRoute(this.destination);
-    
-            if (!success) {
-                // Try a new site
-                const fallback = evacuationSites.find(site =>
-                    !this.triedDestinations.has(JSON.stringify(site.coordinates))
-                );
-    
-                if (fallback) {
-                    const newSuccess = await this.planRoute(fallback.coordinates);
-                    if (newSuccess) {
-                        console.log(`Agent ${this.id} rerouted to ${fallback.name}`);
-                        this.evacuationSiteName = fallback.name;
-                        this.centerName = fallback.area;
-                        this.rerouteCount++;
-                        return;
-                    }
-                }
-    
-                // Retry later
-                console.warn(`Agent ${this.id} stuck — retrying reroute in 7s...`);
-                setTimeout(() => this.checkAndReroute(), 7000);
-            } else {
-                this.rerouteCount++;
-            }
-        }
-    }
+      if (this.status !== "moving") return;
+      if (!this.route || this.routeIndex >= this.route.length) return;
+  
+      const currentPoint = this.route[this.routeIndex];
+  
+      // Check if current destination is full
+      const currentSite = evacuationSites.find(site =>
+          site.name === this.evacuationSiteName && site.area === this.centerName
+      );
+  
+      if (currentSite && currentSite.isFull) {
+          console.log(`🚫 Agent ${this.id} destination is full: ${currentSite.name}`);
+          this.triedDestinations.add(JSON.stringify(currentSite.coordinates));
+      }
+  
+      // If blocked or current destination is full, reroute
+      if (checkForBlockedRoads([currentPoint]) || (currentSite && currentSite.isFull)) {
+          const fallback = evacuationSites
+              .filter(site =>
+                  site.area.toLowerCase() === this.centerName.toLowerCase() &&
+                  !site.isFull &&
+                  !this.triedDestinations.has(JSON.stringify(site.coordinates))
+              )
+              .sort((a, b) => {
+                  // Sort by distance to agent
+                  const distA = turf.distance(turf.point(this.position), turf.point(a.coordinates));
+                  const distB = turf.distance(turf.point(this.position), turf.point(b.coordinates));
+                  return distA - distB;
+              });
+  
+          if (fallback.length > 0) {
+              const newSite = fallback[0];
+              const success = await this.planRoute(newSite.coordinates);
+              if (success) {
+                  console.log(`🔁 Agent ${this.id} rerouted to ${newSite.name}`);
+                  this.evacuationSiteName = newSite.name;
+                  this.centerName = newSite.area;
+                  this.rerouteCount++;
+                  return;
+              }
+          }
+  
+          // Retry again after delay
+          console.warn(`⚠️ Agent ${this.id} stuck, retrying reroute...`);
+          setTimeout(() => this.checkAndReroute(), 5000);
+      }
+  }
+  
     
 
     visualizeArrival() {
@@ -276,50 +318,41 @@ class Agent {
 }
 
 async function initAgentSimulation() {
+  const countElem = document.getElementById('arrivedCount');
+  if (countElem) countElem.textContent = `0`;
 
-    simulationStartTime = Date.now();
-    startSimTimer();
+  // Simulation timer already started in start button click
 
-    const countElem = document.getElementById('arrivedCount');
-    if (countElem) countElem.textContent = `Arrived: 0`;
-
-    const spawnData = await loadAgentSpawnLocations();
-
-    for (const agentData of spawnData) {
-        const { id, coordinates, region } = agentData;
-
-        // Filter evacuation sites by region
-        const possibleSites = evacuationSites.filter(site => site.area.toLowerCase() === region.toLowerCase());
-        if (!possibleSites.length) {
-          console.warn(`⚠️ No evacuation site found for region: ${region} (Agent ID: ${id})`);
-          continue; // Skip this agent if no matching site
-        }
-        const availableSites = possibleSites.filter(site => !site.isFull && site.occupancy < MAX_CAPACITY);
-
-        if (!availableSites.length) {
-            console.warn(`⚠️ No available (non-full) evacuation site for region: ${region} (Agent ID: ${id})`);
-            continue;
-        }
-
-        const evacSite = availableSites[Math.floor(Math.random() * availableSites.length)];
-
-
-        const agent = new Agent(id, coordinates, evacSite.coordinates, evacSite.name, region);
-        await agent.planRoute();
-        agents.push(agent);
-
+  // ⏳ Stop simulation after 30s
+  setTimeout(() => {
+    if (simulationRunning) {
+      simulationRunning = false;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+      if (simTimerInterval) clearInterval(simTimerInterval);
+      showTimedOutSummary();
     }
-    setTimeout(() => {
-        if (simulationRunning) {
-          simulationRunning = false;
-          if (animationFrameId) cancelAnimationFrame(animationFrameId);
-          if (simTimerInterval) clearInterval(simTimerInterval);
-          showTimedOutSummary(); // ⬅️ new function
-        }
-      }, 30000); // 60,000ms = 60 seconds
+  }, 30000);
 
-    animateAgents();
+  // ⏳ Prepare agents with their routes before 5s delay
+  await Promise.all(
+    agents.map(agent => agent.planRoute(agent.destination))
+  );
+
+  // ✅ Start agent movement after 5 seconds
+  setTimeout(() => {
+    agents.forEach(agent => {
+      if (agent.status === "delayed") {
+        agent.status = "moving";
+        agent.startTime = Date.now();
+      }
+    });
+  }, 5000);
+
+  animateAgents(); // Start checking for movement frames
 }
+
+
+
 
 function startSimTimer() {
     const simTimeElem = document.getElementById('simTime');
@@ -374,7 +407,7 @@ function clearAgents() {
     if (table) table.innerHTML = '';
   
     const countElem = document.getElementById('arrivedCount');
-    if (countElem) countElem.textContent = `Arrived: 0`;
+    if (countElem) countElem.textContent = `0`;
   }
   
 let weatherData = [];
@@ -435,19 +468,28 @@ window.addEventListener("DOMContentLoaded", async () => {
 
 
 function startWeatherUpdates() {
-  currentWeatherIndex = 1; // Start from second row
-  updateWeatherTable(currentWeatherIndex);
+  currentWeatherIndex = 1;
 
-  weatherUpdateInterval = setInterval(() => {
+  // ⏳ Weather starts after 3s
+  setTimeout(() => {
+    updateWeatherTable(currentWeatherIndex);
+
+    weatherUpdateInterval = setInterval(() => {
       currentWeatherIndex++;
       if (currentWeatherIndex < weatherData.length) {
-          updateWeatherTable(currentWeatherIndex);
+        updateWeatherTable(currentWeatherIndex);
       } else {
-          clearInterval(weatherUpdateInterval);
+        clearInterval(weatherUpdateInterval);
       }
-  }, 5000); // ⏱ 5 seconds interval
-}
+    }, 5000);
+  }, 3000);
 
+  // ⏳ Agent movement starts after 5s
+  setTimeout(() => {
+    simulationRunning = true;
+    initAgentSimulation();
+  }, 5000);
+}
 
 
 
@@ -479,15 +521,19 @@ window.onclick = (e) => {
 
 document.getElementById("startBtn").addEventListener("click", () => {
   if (!simulationRunning && weatherData.length > 1) {
+    simulationStartTime = Date.now(); // ✅ Timer begins right here
+    startSimTimer(); // ✅ Start updating UI clock
 
-    // 1. Show roadblocks only now
+    revealEvacuationSites();
+    revealRoadblocks();
+
+    // Roadblocks + Evac markers
     window.roadClosures.forEach(road => {
       drawBlockedRoad(road);
       addRoadblockMarker(road.start);
       addRoadblockMarker(road.end);
     });
 
-    // 2. Show evacuation centers now
     window.evacuationSites.forEach(site => {
       const el = document.createElement('div');
       el.className = 'evacuation-center-marker';
@@ -496,20 +542,20 @@ document.getElementById("startBtn").addEventListener("click", () => {
       el.style.backgroundSize = 'cover';
       el.style.backgroundRepeat = 'no-repeat';
       el.style.backgroundPosition = 'center';
-      el.style.backgroundImage = 'url("/gps.png")'; // Default green
-
+      el.style.backgroundImage = 'url("/gps.png")';
+      el.style.opacity = 0;
       const marker = new mapboxgl.Marker(el)
         .setLngLat(site.coordinates)
         .setPopup(new mapboxgl.Popup().setText(site.name))
         .addTo(map);
-
       site.marker = marker;
     });
 
-    // Continue simulation
-    startWeatherUpdates(); // Will show 2nd row, trigger flood warning + agents
+    // Start weather + agents after delay
+    startWeatherUpdates();
   }
 });
+
 
 
 
@@ -563,4 +609,38 @@ map.on('load', async () => {
   // 👇 Initialize agents to appear before simulation
   await initializeAgentsOnly(); 
 });
+
+function fadeInElement(element, delay = 0) {
+  element.style.opacity = 0;
+  element.style.transition = 'opacity 10s ease';
+  setTimeout(() => {
+    element.style.opacity = 1;
+  }, delay);
+}
+
+// Gradually show evacuation sites
+function revealEvacuationSites() {
+  window.evacuationSites.forEach((site, index) => {
+    if (site.marker) {
+      const el = site.marker.getElement();
+      el.style.opacity = 0; // Start hidden
+      el.style.transition = 'opacity 10s ease';
+      setTimeout(() => {
+        el.style.opacity = 1;
+      }, index * 5000); // Delay each one a bit
+    }
+  });
+}
+
+// Gradually show roadblocks (assuming each roadblock has its own layer with id starting with 'roadblock-')
+function revealRoadblocks() {
+  const roadLayers = map.getStyle().layers.filter(layer => layer.id.startsWith('roadblock-'));
+  roadLayers.forEach((layer, index) => {
+    map.setLayoutProperty(layer.id, 'visibility', 'none');
+    setTimeout(() => {
+      map.setLayoutProperty(layer.id, 'visibility', 'visible');
+    }, index * 300);
+  });
+}
+
 

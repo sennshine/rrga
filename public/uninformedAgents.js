@@ -82,8 +82,9 @@ class Agent {
         this.route = [];
         this.routeIndex = 0;
 
-        this.panicDelay = 5000; // All agents wait exactly 5 seconds
-        this.delayStart = Date.now();
+        this.panicDelay = 0;           // No delay at the start
+        this.delayStart = null;        // Will be set only after reroute
+
 
         this.startTime = null;
         this.endTime = null;
@@ -142,12 +143,13 @@ class Agent {
 
       async move() {
         if (this.status === "delayed") {
-            const now = Date.now();
-            if (now - this.delayStart >= this.panicDelay) {
-                this.status = "moving";
-                this.startTime = Date.now();
-            } else return;
+          const now = Date.now();
+          if (this.panicDelay === 0 || (this.delayStart && now - this.delayStart >= this.panicDelay)) {
+              this.status = "moving";
+              if (!this.startTime) this.startTime = Date.now();
+          } else return;
         }
+      
     
         if (!this.route.length || this.status === "blocked" || this.status === "arrived") return;
     
@@ -162,7 +164,7 @@ class Agent {
         const dist = turf.distance(from, to, { units: 'kilometers' }); 
         this.totalDistance += dist;
     
-        const step = 0.00001;
+        const step = 0.000025;
         const dx = targetLon - lon;
         const dy = targetLat - lat;
         const euclideanDist = Math.sqrt(dx * dx + dy * dy);
@@ -237,17 +239,24 @@ class Agent {
               const newSite = fallback[0];
               const success = await this.planRoute(newSite.coordinates);
               if (success) {
-                  console.log(`🔁 Agent ${this.id} rerouted to ${newSite.name}`);
-                  this.evacuationSiteName = newSite.name;
-                  this.centerName = newSite.area;
-                  this.rerouteCount++;
-                  return;
-              }
+                console.log(`🔁 Agent ${this.id} rerouted to ${newSite.name}`);
+                this.evacuationSiteName = newSite.name;
+                this.centerName = newSite.area;
+                this.rerouteCount++;
+            
+                // Apply random delay after rerouting
+                this.status = "delayed";
+                this.panicDelay = Math.random() * 8000;
+                this.delayStart = Date.now();
+            
+                return;
+            }
+            
           }
   
           // Retry again after delay
           console.warn(`⚠️ Agent ${this.id} stuck, retrying reroute...`);
-          setTimeout(() => this.checkAndReroute(), 5000);
+          setTimeout(() => this.checkAndReroute(), 7000);
       }
   }
   
@@ -321,35 +330,22 @@ async function initAgentSimulation() {
   const countElem = document.getElementById('arrivedCount');
   if (countElem) countElem.textContent = `0`;
 
-  // Simulation timer already started in start button click
+  await Promise.all(agents.map(agent => agent.planRoute(agent.destination)));
 
-  // ⏳ Stop simulation after 30s
-  setTimeout(() => {
-    if (simulationRunning) {
-      simulationRunning = false;
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (simTimerInterval) clearInterval(simTimerInterval);
-      showTimedOutSummary();
+  const now = Date.now();
+  agents.forEach(agent => {
+    if (agent.status === "delayed") {
+      agent.status = "moving";
+      agent.startTime = now;
     }
-  }, 30000);
 
-  // ⏳ Prepare agents with their routes before 5s delay
-  await Promise.all(
-    agents.map(agent => agent.planRoute(agent.destination))
-  );
+    agent.panicDelay = Math.random() * 8000;
+    agent.delayStart = null;
+  });
 
-  // ✅ Start agent movement after 5 seconds
-  setTimeout(() => {
-    agents.forEach(agent => {
-      if (agent.status === "delayed") {
-        agent.status = "moving";
-        agent.startTime = Date.now();
-      }
-    });
-  }, 5000);
-
-  animateAgents(); // Start checking for movement frames
+  animateAgents(); // start checking movement
 }
+
 
 
 
@@ -470,7 +466,7 @@ window.addEventListener("DOMContentLoaded", async () => {
 function startWeatherUpdates() {
   currentWeatherIndex = 1;
 
-  // ⏳ Weather starts after 3s
+  // ⏳ Start simulation + weather updates after 3s
   setTimeout(() => {
     updateWeatherTable(currentWeatherIndex);
 
@@ -482,14 +478,15 @@ function startWeatherUpdates() {
         clearInterval(weatherUpdateInterval);
       }
     }, 5000);
-  }, 3000);
+  }, 3000); // start weather updates
 
-  // ⏳ Agent movement starts after 5s
+  // ⏳ After 5s (from button click), start agent movement
   setTimeout(() => {
     simulationRunning = true;
-    initAgentSimulation();
+    initAgentSimulation(); // this should directly begin movement
   }, 5000);
 }
+
 
 
 
@@ -521,11 +518,34 @@ window.onclick = (e) => {
 
 document.getElementById("startBtn").addEventListener("click", () => {
   if (!simulationRunning && weatherData.length > 1) {
+    simulationRunning = true;
+
     simulationStartTime = Date.now(); // ✅ Timer begins right here
     startSimTimer(); // ✅ Start updating UI clock
 
     revealEvacuationSites();
     revealRoadblocks();
+
+    // ⏳ Delay weather start by 3s
+    setTimeout(() => {
+      startWeatherUpdates(); // Weather updates start
+    }, 3000);
+
+    // ⏳ Delay agent movement by 5s
+    setTimeout(() => {
+      animateAgents(); // ⏳ Start moving agents after 5s
+    
+      // ⏱ Timeout after 45s from button click
+      setTimeout(() => {
+        if (simulationRunning) {
+          simulationRunning = false;
+          if (animationFrameId) cancelAnimationFrame(animationFrameId);
+          if (simTimerInterval) clearInterval(simTimerInterval);
+          showTimedOutSummary();
+        }
+      }, 45000);
+    }, 5000); // Delay agent movement
+    
 
     // Roadblocks + Evac markers
     window.roadClosures.forEach(road => {
@@ -574,7 +594,7 @@ function showTimedOutSummary() {
   const avgDistance = arrivedAgents.length > 0 ? (totalDistance / arrivedAgents.length).toFixed(2) : "N/A";
 
   summaryElem.innerHTML = `
-    <p><strong>Simulation timed out after 30s</strong></p>
+    <p><strong>Simulation timed out after 45s</strong></p>
     <p><strong>Evacuation Success Rate:</strong> ${successRate}%</p>
     <p><strong>Average Time Taken:</strong> ${avgTime} seconds</p>
     <p><strong>Average Distance Travelled:</strong> ${avgDistance} km</p>
